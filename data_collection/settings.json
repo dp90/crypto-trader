@@ -1,0 +1,24 @@
+{
+  "exchange": "Binance",
+  "cash": "USDT",
+  "crypto": [
+    "ADA",
+    "BCH",
+    "BNB",
+    "BTC",
+    "DOGE",
+    "DOT",
+    "ETH",
+    "GRT",
+    "LINK",
+    "LTC",
+    "XLM",
+    "XRP"
+  ],
+  "startDate": "15/03/2019",
+  "startTime": "00:00",
+  "endDate": "15/03/2021",
+  "endTime": "00:00",
+  "timeFormat": "%d/%m/%Y %H:%M",
+  "timeStep": "5m"
+}
