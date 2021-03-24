@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class TimeConverter(object):
@@ -15,3 +15,6 @@ class TimeConverter(object):
 
     def from_timestamp(self, timestamp):
         return datetime.fromtimestamp( timestamp / self.multiplier)
+
+    def add_hours(self, start_time: int, n_hours: int):
+        return start_time + n_hours * 3600 * self.multiplier

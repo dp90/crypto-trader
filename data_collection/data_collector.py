@@ -1,7 +1,9 @@
-from data_collection.settings_reader import SettingsReader
+import time
+
+from settings_reader import SettingsReader
 from python_bitvavo_api.bitvavo import Bitvavo
 import pandas as pd
-from data_collection.utils import TimeConverter
+from utils import TimeConverter
 import requests
 
 
@@ -12,21 +14,35 @@ class DataCollector(object):
         self.exchange = exchange_map[self.settings['exchange']]
 
     def collect(self, currency):
-        options = {
-            "start": self.time_converter.to_timestamp(self.settings['startDate'], self.settings['startTime']),
-            "end": self.time_converter.to_timestamp(self.settings['endDate'], self.settings['endTime'])
-        }
-        currency_pair = self.get_currency_pair(currency)
-        response = self.exchange.candles(currency_pair, self.settings['timeStep'], options)
+        final_time = self.time_converter.to_timestamp(self.settings['endDate'], self.settings['endTime'])
+        start_interval = self.time_converter.to_timestamp(self.settings['startDate'], self.settings['startTime'])
+        dataframes = []
 
-        if type(response) == pd.DataFrame:
-            tohlcv_columns = list(response.columns)
-        else:
-            tohlcv_columns = ["TIME", "OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]
+        while start_interval < final_time:
+            print(currency, "- interval starting at:", self.time_converter.from_timestamp(start_interval))
+            end_interval = self.time_converter.add_hours(start_interval, self.settings['request_interval_in_hours'])
+            if end_interval > final_time:
+                end_interval = final_time
 
-        tohlcv = pd.DataFrame(response, columns=tohlcv_columns)
-        tohlcv.TIME = tohlcv.TIME.apply(lambda timestamp: self.time_converter.from_timestamp(timestamp))
-        return tohlcv
+            options = {
+                "start": start_interval,
+                "end": end_interval
+            }
+            currency_pair = self.get_currency_pair(currency)
+            response = self.exchange.candles(currency_pair, self.settings['timeStep'], options)
+
+            if type(response) == pd.DataFrame:
+                tohlcv_columns = list(response.columns)
+            else:
+                tohlcv_columns = ["TIME", "OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"]
+
+            tohlcv = pd.DataFrame(response, columns=tohlcv_columns)
+            tohlcv.TIME = tohlcv.TIME.apply(lambda timestamp: self.time_converter.from_timestamp(timestamp))
+            dataframes.append(tohlcv)
+            start_interval = end_interval
+            time.sleep(1)
+
+        return pd.concat(dataframes)
 
     def get_currency_pair(self, currency):
         exchange = self.settings['exchange']
@@ -67,6 +83,7 @@ class Binance(object):
                                   "NUMBER_OF_TRADES", "taker buy base volume", "taker buy quote asset volume", "ignore"]
         self.ignore_elements = ["close time", "base volume", "taker buy base volume", "taker buy quote asset volume",
                                 "ignore"]
+        self.exceeded_rate_limit = False
 
     def candles(self, currency_pair, time_step, options):
         url = "/api/v3/klines"
@@ -76,10 +93,15 @@ class Binance(object):
             "endTime": options['end'],
             "interval": time_step
         }
-        response = requests.get(url=self.base + url, params=query_params)
-        df = pd.DataFrame(response.json(), columns=self.response_elements)
-        df = df.drop(columns=self.ignore_elements)
-        return df
+        if not self.exceeded_rate_limit:
+            response = requests.get(url=self.base + url, params=query_params)
+            if response.status_code == 429:
+                self.exceeded_rate_limit = True
+            df = pd.DataFrame(response.json(), columns=self.response_elements)
+            df = df.drop(columns=self.ignore_elements)
+            return df
+        else:
+            raise RuntimeError("Binance rate limit is exceeded.")
 
 
 exchange_map = {'Binance': Binance(), 'Poloniex': Poloniex(), 'Bitvavo': Bitvavo()}
