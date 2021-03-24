@@ -3,8 +3,8 @@ import pandas as pd
 import requests
 import os
 
-from data_collection.settings_reader import SettingsReader
-from data_collection.utils import TimeConverter
+from settings_reader import SettingsReader
+from utils import TimeConverter
 
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), 'settings.json')
 
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     volume_df.to_csv("volume_per_pair", index=False)
     print(volume_df.sort_values(by=["VOLUME", "N_TRADES"]).head(15))
 
-    data = pd.read_csv("volume_per_pair")
+    data = pd.read_csv("../data/volume_per_pair")
     data = data.sort_values(by="VOLUME")
     data = data.drop(columns=["START_TIME", "END_TIME"])
     grouped = data.groupby(["PAIR"]).mean()
