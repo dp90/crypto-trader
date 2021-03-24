@@ -3,22 +3,22 @@
   "cash": "USDT",
   "crypto": [
     "ADA",
-    "BCH",
+    "ATOM",
     "BNB",
     "BTC",
-    "DOGE",
-    "DOT",
     "ETH",
-    "GRT",
     "LINK",
     "LTC",
+    "TRX",
     "XLM",
-    "XRP"
+    "XRP",
+    "VET"
   ],
-  "startDate": "15/03/2019",
-  "startTime": "00:00",
-  "endDate": "15/03/2021",
-  "endTime": "00:00",
+  "startDate": "01/05/2019",
+  "startTime": "00:01",
+  "endDate": "21/03/2021",
+  "endTime": "15:01",
   "timeFormat": "%d/%m/%Y %H:%M",
-  "timeStep": "5m"
+  "timeStep": "5m",
+  "request_interval_in_hours": 2
 }
