@@ -1,16 +1,17 @@
 import time
 
+from data_collection.poloniex import Poloniex
+from data_collection.binance import Binance
 from settings_reader import SettingsReader
 from python_bitvavo_api.bitvavo import Bitvavo
 import pandas as pd
 from utils import TimeConverter
-import requests
 
 
 class DataCollector(object):
     def __init__(self, settings_path):
         self.settings = SettingsReader.read(settings_path)
-        self.time_converter = TimeConverter(self.settings)
+        self.time_converter = TimeConverter(self.settings["timeFormat"], self.settings["exchange"])
         self.exchange = exchange_map[self.settings['exchange']]
 
     def collect(self, currency):
@@ -52,56 +53,6 @@ class DataCollector(object):
             return self.settings['cash'] + "_" + currency
         elif exchange == "Binance":
             return currency + self.settings['cash']
-
-
-class Poloniex(object):
-    def __init__(self):
-        self.base = "https://poloniex.com/public"
-        self.min2sec_map = {'5m': 300, '15m': 900, "30m": 1800}
-
-    def candles(self, currency_pair, time_step, options):
-        query_params = {
-            "command": "returnChartData",
-            "currencyPair": currency_pair,
-            "start": options['start'],
-            "end": options['end'],
-            "period": self.min2sec_map.get(time_step, 1440)
-        }
-        response = requests.get(url=self.base, params=query_params)
-        df = pd.DataFrame(response.json())
-        df = df.drop(columns=['quoteVolume', 'weightedAverage'])
-        df = df[['date', 'open', 'high', 'low', 'close', 'volume']]
-        df = df.rename(columns={'date': 'TIME', 'open': 'OPEN', 'high': 'HIGH', 'low': 'LOW', 'close': 'CLOSE',
-                                'volume': 'VOLUME'})
-        return df
-
-
-class Binance(object):
-    def __init__(self):
-        self.base = "https://api1.binance.com"
-        self.response_elements = ["TIME", "OPEN", "HIGH", "LOW", "CLOSE", "base volume", "close time", "VOLUME",
-                                  "NUMBER_OF_TRADES", "taker buy base volume", "taker buy quote asset volume", "ignore"]
-        self.ignore_elements = ["close time", "base volume", "taker buy base volume", "taker buy quote asset volume",
-                                "ignore"]
-        self.exceeded_rate_limit = False
-
-    def candles(self, currency_pair, time_step, options):
-        url = "/api/v3/klines"
-        query_params = {
-            "symbol": currency_pair,
-            "startTime": options['start'],
-            "endTime": options['end'],
-            "interval": time_step
-        }
-        if not self.exceeded_rate_limit:
-            response = requests.get(url=self.base + url, params=query_params)
-            if response.status_code == 429:
-                self.exceeded_rate_limit = True
-            df = pd.DataFrame(response.json(), columns=self.response_elements)
-            df = df.drop(columns=self.ignore_elements)
-            return df
-        else:
-            raise RuntimeError("Binance rate limit is exceeded.")
 
 
 exchange_map = {'Binance': Binance(), 'Poloniex': Poloniex(), 'Bitvavo': Bitvavo()}

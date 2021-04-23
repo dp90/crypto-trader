@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 
 
 class TimeConverter(object):
-    def __init__(self, settings):
-        self.format = settings["timeFormat"]
+    def __init__(self, time_format, exchange):
+        self.format = time_format
         self.multiplier = 1000 \
-            if (settings["exchange"] == "Bitvavo" or settings["exchange"] == "Binance")\
+            if (exchange == "Bitvavo" or exchange == "Binance")\
             else 1
 
     def to_timestamp(self, date_string: str, time_string: str):

@@ -115,7 +115,7 @@ venv.bak/
 .spyproject
 
 # IntelliJ project settings
-/idea
+/.idea
 *.iml
 
 # Rope project settings
@@ -131,3 +131,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# data in data directory
+/data
