@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 import os
 
-from settings_reader import SettingsReader
+from utils.settings_reader import SettingsReader
 from utils import TimeConverter
 
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), 'settings.json')

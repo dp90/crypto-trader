@@ -1,0 +1,18 @@
+{
+  "cash": "USDT",
+  "currencies": [
+    "ADA",
+    "ATOM",
+    "BNB",
+    "BTC",
+    "ETH",
+    "LINK",
+    "LTC",
+    "TRX",
+    "XLM",
+    "XRP",
+    "VET"
+  ],
+  "n_time_steps_per_state": 50,
+  "n_time_steps_in_dataset": 198350
+}

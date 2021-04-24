@@ -2,10 +2,10 @@ import time
 
 from data_collection.poloniex import Poloniex
 from data_collection.binance import Binance
-from settings_reader import SettingsReader
+from utils.settings_reader import SettingsReader
 from python_bitvavo_api.bitvavo import Bitvavo
 import pandas as pd
-from utils import TimeConverter
+from data_collection.utils import TimeConverter
 
 
 class DataCollector(object):
