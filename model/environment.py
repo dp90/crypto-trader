@@ -1,13 +1,14 @@
 import numpy as np
 from model.data_loader import DataLoader
+from typing import List
 
 
 class Environment(object):
-    def __init__(self, cash, currencies, steps_per_state, n_time_steps):
+    def __init__(self, cash: str, currencies: List[str], steps_per_state: int, n_time_steps: int) -> None:
         self.cash = cash
         self.currencies = currencies
         self.steps_per_state = steps_per_state
-        self.observation_space = len(self.currencies)
+        self.observation_space = (len(self.currencies), steps_per_state, 6)
         self.action_space = len(self.currencies)
         self.data_loader = DataLoader(self.currencies, self.steps_per_state)
         self.time = steps_per_state
@@ -18,8 +19,8 @@ class Environment(object):
 
     def step(self, action):
         self.time += 1
-        state = self.data_loader.next(self.time)  # assets x time_steps x features (OHLCVN)
-        reward = self._calculate_reward(state[:, -2:, (0, 3)], action)
+        state = self.data_loader.next(self.time)  # features (OHLCVN) x assets x time_steps
+        reward = self._calculate_reward(state[(0, 3), :, -2:], action)
         self.latest_action = action
         done = self._is_done()
         return state, reward, done
@@ -37,7 +38,7 @@ class Environment(object):
         return reward
 
     def _calculate_closing_portfolio_value(self, values, action):
-        prev_closing_values, opening_values, closing_values = values[:, -2, 3], values[:, -1, 0], values[:, -1, 3]
+        prev_closing_values, opening_values, closing_values = values[3, :, -2], values[0, :, -1], values[3, :, -1]
         action = self._subtract_transaction_costs(action, prev_closing_values, opening_values)
         delta_values = np.insert(closing_values / opening_values, 0, 1)  # Add 1 to start (pos = 0) of delta_v for cash
         return np.sum(self.portfolio_value * delta_values * action)

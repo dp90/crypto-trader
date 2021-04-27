@@ -13,6 +13,6 @@
     "XRP",
     "VET"
   ],
-  "n_time_steps_per_state": 50,
-  "n_time_steps_in_dataset": 198350
+  "steps_per_state": 50,
+  "n_time_steps": 198350
 }

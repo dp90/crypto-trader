@@ -17,7 +17,4 @@ class DataLoader(object):
         #  refine towards recent data
 
     def next(self, time):
-        return self.data[:, time - self.steps_per_state: time, :]  # M x T x F
-
-    def future_open(self, time):
-        return self.data[:, time: time + 1, 0]
+        return np.transpose(self.data[:, time - self.steps_per_state: time, :], (2, 0, 1))  # F x M x T
