@@ -1,29 +1,63 @@
-# With or without value function
-# With or without discounted returns
-# With or without experience
-# With or without exploration
 import os
-import numpy as np
+import logging
 import torch
+import torch.nn as nn
+import torch.optim as optim
+from rltools.algorithms import PPO
+from rltools.azure.utils import parse_hyperparameter_args
+from rltools.agents import MLPCritic, PpoGaussianActor
+from rltools.utils import Scaler, LoggingConfig
 
-from trader.environment import Environment
-from utils.settings_reader import SettingsReader
+from trader.environment import BinanceEnvironment
+from trader.states import StateProcessor
 
-SETTINGS = os.path.join(os.path.dirname(__file__), 'environment_settings.json')
-torch.set_default_dtype(torch.float64)
+logger = logging.getLogger(__name__)
+LoggingConfig.add_config_to_logger(logger)
+
+
+def train(hp):
+    reward_generator = RewardGenerator()
+    data_loader = BinanceDataLoader()
+    scaler = Scaler({})
+
+    binance_simulator = BinanceSimulator(data_loader)
+    action_converter = ActionConverter()
+    book_keeper = BookKeeper()
+    market_interpreter = MarketInterpreter()
+
+    state_processor = StateProcessor(scaler, binance_simulator, action_converter,
+                                     book_keeper, market_interpreter)
+    env = BinanceEnvironment(state_processor, reward_generator)
+
+    actor = PpoGaussianActor(OBS_DIM, ACTOR_DIMS, HIDDEN_SIZES, nn.ReLU(), 
+                             nn.Softmax(dim=-1), ACTION_LOG_STD)
+    critic = MLPCritic(OBS_DIM, CRITIC_DIMS, nn.ReLU(), nn.Identity())
+
+    buffer_params = {
+        "size": SIZE,
+        "state_dim": OBS_DIM,
+        "action_dim": ACT_DIM,
+    }
+    train_params = {
+        "n_epochs": N_EPOCHS,
+        "n_episodes": N_EPISODES, 
+        "clip_ratio": CLIP_RATIO,
+        "n_actor_updates": N_ACTOR_UPDATES,
+        "n_critic_updates": N_CRITIC_UPDATES,
+        "update_batch_size": UPDATE_BATCH_SIZE,
+        "discount_factor": DISCOUNT_FACTOR,
+        "gae_lambda": GAE_LAMBDA,
+    }
+
+    ppo = PPO(env, actor, critic, optim.Adam, {'lr': ACTOR_LEARNING_RATE}, optim.Adam,
+              {'lr': CRITIC_LEARNING_RATE}, train_params, buffer_params)
+
+    evaluate()
+    return
+
 
 if __name__ == "__main__":
-    env_settings = SettingsReader.read(SETTINGS)
-    env = Environment(**env_settings)
-    state = env.reset()
-
-    observation_space = env.observation_space
-    action_space = env.action_space
-
-    INPUT_DIM = observation_space[2]
-    H1_DIM = 2
-    H2_DIM = 20
-    OUTPUT_DIM = 1
-
-    prev_action = np.random.rand(action_space + 1) * 10
-    prev_action = prev_action / np.linalg.norm(prev_action)
+    HYPERPARAMETER_PATH = os.path.join(DIR.ROOT, 'opal', 'hyperparameter_settings.toml')
+    params = parse_hyperparameter_args(HYPERPARAMETER_PATH)
+    logger.info(f"{params}")
+    train(params)

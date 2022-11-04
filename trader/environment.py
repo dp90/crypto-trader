@@ -1,6 +1,22 @@
 import numpy as np
-from model.data_loader import DataLoader
+from trader.data_loader import DataLoader
 from typing import List
+from rltools.environments import IEnvironment
+from rltools.rewards import IRewardGenerator
+from rltools.states import IStateProcessor
+
+
+class BinanceEnvironment(IEnvironment):
+    def __init__(self, state_processor: IStateProcessor, reward_generator: IRewardGenerator):
+        super().__init__(state_processor, reward_generator)
+
+    def _is_done(self, state: np.ndarray) -> bool:
+        end_of_data = self.state_processor.time >= self.state_processor.n_time_steps
+        agent_is_broke = self.state_processor.portfolio_value <= 0
+        return end_of_data or agent_is_broke
+
+    def _get_info(self) -> dict:
+        return {}
 
 
 class Environment(object):
