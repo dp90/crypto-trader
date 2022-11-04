@@ -1,11 +1,10 @@
 import os
 import pandas as pd
 
-from data_collection.binance import Binance
-from data_collection.main import DATA_DIR
-import requests
+from data.collection.binance import Binance
+from data.collection.main import DATA_DIR
 
-from data_collection.utils import TimeConverter
+from data.utils import TimeConverter
 
 if __name__ == "__main__":
     data = pd.read_csv(os.path.join(DATA_DIR, "ADA.csv"))

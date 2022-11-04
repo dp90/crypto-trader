@@ -11,30 +11,3 @@ class DirectoryConfig(object):
     RESULTS = os.path.join(LOGS, 'results')
     MODELS = os.path.join(ROOT, 'models')
     DATA = os.path.join(ROOT, 'data')
-
-
-@dataclass
-class Mode(object):
-    name: str
-    filename: str
-    n_scenarios: int
-
-
-class IMode(ABC):   
-    @classmethod  # Ordering of decorators is important
-    @property
-    @abstractmethod
-    def TRAIN(cls):
-        raise NotImplementedError
-
-    @classmethod  # Ordering of decorators is important
-    @property
-    @abstractmethod
-    def TEST(cls):
-        raise NotImplementedError
-
-    @classmethod  # Ordering of decorators is important
-    @property
-    @abstractmethod
-    def DEVELOP(cls):
-        raise NotImplementedError

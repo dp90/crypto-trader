@@ -6,8 +6,7 @@ import os
 import numpy as np
 import torch
 
-from model.environment import Environment
-from model.policy import Policy
+from trader.environment import Environment
 from utils.settings_reader import SettingsReader
 
 SETTINGS = os.path.join(os.path.dirname(__file__), 'environment_settings.json')
@@ -26,7 +25,5 @@ if __name__ == "__main__":
     H2_DIM = 20
     OUTPUT_DIM = 1
 
-    actor = Policy(INPUT_DIM, H1_DIM, H2_DIM, OUTPUT_DIM)
     prev_action = np.random.rand(action_space + 1) * 10
     prev_action = prev_action / np.linalg.norm(prev_action)
-    action = actor.forward(state, prev_action)

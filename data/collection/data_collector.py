@@ -1,11 +1,10 @@
 import time
 
-from data_collection.poloniex import Poloniex
-from data_collection.binance import Binance
+from data.collection.poloniex import Poloniex
+from data.collection.binance import Binance
 from utils.settings_reader import SettingsReader
-from python_bitvavo_api.bitvavo import Bitvavo
 import pandas as pd
-from data_collection.utils import TimeConverter
+from data.utils import TimeConverter
 
 
 class DataCollector(object):
@@ -47,12 +46,10 @@ class DataCollector(object):
 
     def get_currency_pair(self, currency):
         exchange = self.settings['exchange']
-        if exchange == "Bitvavo":
-            return currency + "-" + self.settings['cash']
-        elif exchange == "Poloniex":
+        if exchange == "Poloniex":
             return self.settings['cash'] + "_" + currency
         elif exchange == "Binance":
             return currency + self.settings['cash']
 
 
-exchange_map = {'Binance': Binance(), 'Poloniex': Poloniex(), 'Bitvavo': Bitvavo()}
+exchange_map = {'Binance': Binance(), 'Poloniex': Poloniex()}

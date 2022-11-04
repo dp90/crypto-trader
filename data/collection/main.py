@@ -1,6 +1,6 @@
 import os
 
-from data_collector import DataCollector
+from data.collection.data_collector import DataCollector
 
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), 'settings.json')
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
