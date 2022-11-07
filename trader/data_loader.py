@@ -5,14 +5,12 @@ import logging
 from typing import List
 from rltools.utils import LoggingConfig
 
-from trader.configs import TradingConfig as TC
-
 logger = logging.getLogger(__name__)
 LoggingConfig.add_config_to_logger(logger)
 
 
 class BinanceDataLoader(object):
-    def __init__(self, path, config = TC):
+    def __init__(self, path, config):
         self.config = config
         self.data = self._load_data(path)
         self.index = 0

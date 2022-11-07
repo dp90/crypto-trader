@@ -2,11 +2,10 @@ import pandas as pd
 import numpy as np
 import os
 import pytest
-from trader.configs import TradingConfig
 
 from trader.data_loader import BinanceDataLoader
 
-class TestConfig(TradingConfig):
+class TestConfig:
     START_CAPITAL = 1000
     N_ASSETS = 5
     VARIABLES = ['TIME', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'N_TRADES']

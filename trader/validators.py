@@ -1,10 +1,8 @@
 import numpy as np
 
-from trader.configs import TradingConfig as TC
-
 
 class BookKeeper(object):
-    def __init__(self, portfolio: np.ndarray = TC.INITIAL_PF):
+    def __init__(self, portfolio: np.ndarray):
         self.portfolio = portfolio
     
     def update_portfolio(self, portfolio: np.ndarray):

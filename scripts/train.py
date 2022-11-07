@@ -1,6 +1,5 @@
 import os
 import logging
-import torch
 import torch.nn as nn
 import torch.optim as optim
 from rltools.algorithms import PPO
@@ -8,6 +7,8 @@ from rltools.azure.utils import parse_hyperparameter_args
 from rltools.agents import MLPCritic, PpoGaussianActor
 from rltools.utils import Scaler, LoggingConfig
 
+from configs import DirectoryConfig as DIR, TradingConfig as TC
+from trader.data_loader import BinanceDataLoader
 from trader.environment import BinanceEnvironment
 from trader.states import StateProcessor
 
@@ -19,11 +20,11 @@ def train(hp):
     # Client needs a config to set everything up?
 
     reward_generator = RewardGenerator()
-    data_loader = BinanceDataLoader()
+    data_loader = BinanceDataLoader(DIR.DATA, TC)
     scaler = Scaler({})
 
     binance_simulator = BinanceSimulator(data_loader)
-    book_keeper = BookKeeper()
+    book_keeper = BookKeeper(TC.INITIAL_PORTFOLIO)
     action_converter = ActionConverter(book_keeper)
     market_interpreter = MarketInterpreter()
 

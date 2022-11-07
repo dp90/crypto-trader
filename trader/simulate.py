@@ -1,7 +1,5 @@
 import numpy as np
 
-from trader.configs import TradingConfig as TC
-
 
 class BinanceSimulator(object):
     def __init__(self, data_loader, portfolio):
@@ -13,17 +11,12 @@ class BinanceSimulator(object):
         market = self.get_market_data()
         self.is_executable(trade, market)
         self.update_portfolio(trade)
-        return self.get_market_data(), self.get_portfolio()
+        return self.get_market_data(), self.portfolio
 
     def is_valid(self, trade) -> bool:
         # Check if requested trade volumes are possible given current portfolio.
         # Throw error if not possible: converter should have modified these.
         return False
-
-    def load_market(self):
-        data = self.data_loader.next()
-        # Loads the next trading period of data
-        pass
 
     def is_executable(self, trade, market) -> np.ndarray:
         # Check data if trade can be executed:
@@ -36,6 +29,7 @@ class BinanceSimulator(object):
         # Computes the new asset amounts
         # Computes the transaction costs
         # Deducts the transaction costs
+        # self.portfolio = something
         pass
 
     def get_market_data(self) -> np.ndarray:
@@ -53,22 +47,7 @@ class BinanceSimulator(object):
             TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, N_TRADES per currency 
             in shape (n_assets, n_variables)
         """
-        return np.zeros((TC.N_ASSETS, TC.N_VARIABLES))
-
-    def get_portfolio(self) -> np.ndarray:
-        """
-        Gets the next portfolio balance: amount in cash for each currency.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        np.ndarray
-            amount in cash per currency
-        """
-        return np.zeros(TC.N_ASSETS)
+        return self.data_loader.next()
 
     def reset(self):
         """
@@ -76,3 +55,4 @@ class BinanceSimulator(object):
         - Data?
         - Intial portfolio? Or should that continue from last known pf?
         """
+        pass

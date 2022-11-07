@@ -2,8 +2,6 @@ import numpy as np
 from rltools.states import IStateProcessor
 from rltools.utils import Scaler
 
-from trader.configs import TradingConfig as TC
-
 
 class StateProcessor(IStateProcessor):
     def __init__(self, scaler: Scaler, binance_simulator: BinanceSimulator,
