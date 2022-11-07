@@ -29,7 +29,7 @@ class BinanceSimulator(object):
         # Check data if trade can be executed:
         # - Enough trades
         # - Enough trade volume
-        pass
+        return np.zeros(1)
 
     def update_portfolio(self, trade):
         # Takes latest close and adds slippage
