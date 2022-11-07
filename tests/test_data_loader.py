@@ -1,21 +1,13 @@
 import pandas as pd
 import numpy as np
-import os
 import pytest
 
+from tests.configs import RESOURCES_PATH, TestConfig
 from trader.data_loader import BinanceDataLoader
-
-class TestConfig:
-    START_CAPITAL = 1000
-    N_ASSETS = 5
-    VARIABLES = ['TIME', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'N_TRADES']
-    N_VARIABLES = len(VARIABLES)
-    CURRENCY_ICS = [1, 2, 3]
-    CURRENCIES = ['ADA', 'ATOM']
 
 
 class TestDataLoader:
-    path = os.path.join(os.getcwd(), 'tests', 'resources')
+    path = RESOURCES_PATH
     data_loader = BinanceDataLoader(path, TestConfig)
 
     def test_read_data(self):

@@ -47,6 +47,7 @@ class BinanceDataLoader(object):
         return np.array([df.to_numpy() for df in data])
 
     def next(self):
+        """Should only be called from BinanceSimulator!!"""
         try:
             data = self.data[:, self.index, :]
         except IndexError:

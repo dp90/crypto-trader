@@ -1,30 +1,45 @@
 import numpy as np
+import logging
+from rltools.utils import LoggingConfig
+
+from trader.data_loader import BinanceDataLoader
+
+logger = logging.getLogger(__name__)
+LoggingConfig.add_config_to_logger(logger)
 
 
-class BinanceSimulator(object):
-    def __init__(self, data_loader, portfolio):
+class BinanceSimulator:
+    def __init__(self, data_loader: BinanceDataLoader, portfolio: np.ndarray):
         self.data_loader = data_loader
         self.portfolio = portfolio
 
-    def execute(self, trade):
-        self.is_valid(trade)
-        market = self.get_market_data()
-        self.is_executable(trade, market)
-        self.update_portfolio(trade)
-        return self.get_market_data(), self.portfolio
+    def execute(self, order):
+        self._is_valid(order)
+        market = self._get_market_data()
+        trade = self._is_executable(order, market)
+        self._update_portfolio(trade)
+        return self._get_market_data(), self.portfolio
 
-    def is_valid(self, trade) -> bool:
-        # Check if requested trade volumes are possible given current portfolio.
+    def _is_valid(self, order) -> bool:
+        # Check if requested order volumes are possible given current portfolio.
         # Throw error if not possible: converter should have modified these.
-        return False
+        if any((order + self.portfolio) < 0):
+            logger.error(f"Sell order cannot exceed amount in portfolio: \n\
+                order: {order},\nportfolio: {self.portfolio}")
+            raise ValueError
+        if order.sum() != 0.0:
+            logger.error(f"Order should sum to 0.0, but sums to {order.sum()}")
+            raise ValueError
+        return True
 
-    def is_executable(self, trade, market) -> np.ndarray:
-        # Check data if trade can be executed:
+    def _is_executable(self, order, market) -> np.ndarray:
+        # Check data if order can be executed:
         # - Enough trades
         # - Enough trade volume
+        # Return how much of the order can be fullfilled
         return np.zeros(1)
 
-    def update_portfolio(self, trade):
+    def _update_portfolio(self, trade):
         # Takes latest close and adds slippage
         # Computes the new asset amounts
         # Computes the transaction costs
@@ -32,7 +47,7 @@ class BinanceSimulator(object):
         # self.portfolio = something
         pass
 
-    def get_market_data(self) -> np.ndarray:
+    def _get_market_data(self) -> np.ndarray:
         """
         Gets the next observation of the markets, including
         TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, N_TRADES for each currency.
@@ -55,4 +70,4 @@ class BinanceSimulator(object):
         - Data?
         - Intial portfolio? Or should that continue from last known pf?
         """
-        pass
+        self.data_loader.reset()

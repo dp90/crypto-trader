@@ -8,9 +8,12 @@ from rltools.agents import MLPCritic, PpoGaussianActor
 from rltools.utils import Scaler, LoggingConfig
 
 from configs import DirectoryConfig as DIR, TradingConfig as TC
+from trader.converters import ActionConverter
 from trader.data_loader import BinanceDataLoader
 from trader.environment import BinanceEnvironment
+from trader.rewards import RewardGenerator
 from trader.states import StateProcessor
+from trader.validators import BookKeeper
 
 logger = logging.getLogger(__name__)
 LoggingConfig.add_config_to_logger(logger)
@@ -19,7 +22,7 @@ LoggingConfig.add_config_to_logger(logger)
 def train(hp):
     # Client needs a config to set everything up?
 
-    reward_generator = RewardGenerator()
+    reward_generator = RewardGenerator(TC)
     data_loader = BinanceDataLoader(DIR.DATA, TC)
     scaler = Scaler({})
 

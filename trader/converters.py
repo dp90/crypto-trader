@@ -11,7 +11,7 @@ class ActionConverter(object):
     def __init__(self, book_keeper: BookKeeper):
         self.book_keeper = book_keeper
 
-    def convert(self, action: np.ndarray) -> dict:
+    def convert(self, action: np.ndarray) -> np.ndarray:
         """
         Converts actions as returned by a RL agent to buy and sell
         orders in the form of an HTTP request that can be sent to 
@@ -24,8 +24,9 @@ class ActionConverter(object):
         
         Returns
         -------
-        dict
-            Dictionary with the HTTP request.
+        np.ndarray
+            Amounts to buy and sell in terms of cash. Negative
+            values are sells, positive buys.
 
         Raises
         ------
@@ -33,5 +34,6 @@ class ActionConverter(object):
             If requested trades are not possible with current portfolio.
         """
         self.book_keeper.is_valid(action)
-        request = {}
-        return request
+        desired_portfolio = action * self.book_keeper.portfolio.sum()
+        order = desired_portfolio - self.book_keeper.portfolio
+        return order
