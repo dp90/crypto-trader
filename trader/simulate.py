@@ -1,6 +1,6 @@
 import numpy as np
 
-from configs import TradingConfig as TC
+from trader.configs import TradingConfig as TC
 
 
 class BinanceSimulator(object):
@@ -10,7 +10,7 @@ class BinanceSimulator(object):
 
     def execute(self, trade):
         self.is_valid(trade)
-        market = self.load_market()
+        market = self.get_market_data()
         self.is_executable(trade, market)
         self.update_portfolio(trade)
         return self.get_market_data(), self.get_portfolio()
@@ -21,6 +21,7 @@ class BinanceSimulator(object):
         return False
 
     def load_market(self):
+        data = self.data_loader.next()
         # Loads the next trading period of data
         pass
 
@@ -31,7 +32,7 @@ class BinanceSimulator(object):
         pass
 
     def update_portfolio(self, trade):
-        # Takes a price in between high and low
+        # Takes latest close and adds slippage
         # Computes the new asset amounts
         # Computes the transaction costs
         # Deducts the transaction costs
@@ -68,3 +69,10 @@ class BinanceSimulator(object):
             amount in cash per currency
         """
         return np.zeros(TC.N_ASSETS)
+
+    def reset(self):
+        """
+        Called from state processor. Resets:
+        - Data?
+        - Intial portfolio? Or should that continue from last known pf?
+        """

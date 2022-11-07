@@ -16,17 +16,19 @@ LoggingConfig.add_config_to_logger(logger)
 
 
 def train(hp):
+    # Client needs a config to set everything up?
+
     reward_generator = RewardGenerator()
     data_loader = BinanceDataLoader()
     scaler = Scaler({})
 
     binance_simulator = BinanceSimulator(data_loader)
-    action_converter = ActionConverter()
     book_keeper = BookKeeper()
+    action_converter = ActionConverter(book_keeper)
     market_interpreter = MarketInterpreter()
 
     state_processor = StateProcessor(scaler, binance_simulator, action_converter,
-                                     book_keeper, market_interpreter)
+                                     market_interpreter)
     env = BinanceEnvironment(state_processor, reward_generator)
 
     actor = PpoGaussianActor(OBS_DIM, ACTOR_DIMS, HIDDEN_SIZES, nn.ReLU(), 

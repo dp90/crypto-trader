@@ -1,7 +1,7 @@
 import numpy as np
 from rltools.rewards import IRewardGenerator
 
-from configs import TradingConfig as TC
+from trader.configs import TradingConfig as TC
 
 
 class RewardGenerator(IRewardGenerator):
