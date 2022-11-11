@@ -1,6 +1,8 @@
 import numpy as np
 from abc import ABC, abstractmethod
 
+from trader.utils import shift_window
+
 
 class ITechnicalIndicator(ABC):
     def __init__(self, config):
@@ -11,7 +13,7 @@ class ITechnicalIndicator(ABC):
         raise NotImplementedError
     
     @abstractmethod
-    def get_indicators(self) -> list:
+    def get_indicators(self) -> np.ndarray:
         raise NotImplementedError
     
     @abstractmethod
@@ -30,8 +32,8 @@ class OnBalanceVolume(ITechnicalIndicator):
         self._on_balance_volume(market_data)
         self._obv_ema()
 
-    def get_indicators(self) -> list:
-        return [self.obv, self.obv_ema]
+    def get_indicators(self) -> np.ndarray:
+        return np.column_stack((self.obv, self.obv_ema))
 
     def _on_balance_volume(self, market_data):
         growth_sign = np.sign(market_data[:, self.c.CLOSE_IX] - \
@@ -62,8 +64,8 @@ class AwesomeOscillator(ITechnicalIndicator):
         self.ema34 = self.ema34 + (mid - self.ema34) / 34
         self.ema5 = self.ema5 + (mid - self.ema5) / 5
 
-    def get_indicators(self) -> list:
-        return [self.ema5 - self.ema34]
+    def get_indicators(self) -> np.ndarray:
+        return (self.ema5 - self.ema34)[:, None]
 
     def reset(self):
         self.ema34 = np.zeros(self.c.N_ASSETS)
@@ -76,31 +78,29 @@ class SimpleMovingAverage(ITechnicalIndicator):
         self.reset()
 
     def interpret(self, market_data):
-        new = market_data[:, self.c.CLOSE_IX]
-        self.sma30 = self.sma30 + (new - self.sma30) / 30
-        self.sma60 = self.sma60 + (new - self.sma60) / 60
+        self.hist = shift_window(self.hist, market_data[:, self.c.CLOSE_IX])
 
-    def get_indicators(self) -> list:
-        return [self.sma30, self.sma60]
+    def get_indicators(self) -> np.ndarray:
+        sma30 = self.hist[:, -30:].mean(axis=1)
+        sma60 = self.hist.mean(axis=1)
+        return np.column_stack((sma30, sma60))
 
     def reset(self):
-        self.sma30 = np.zeros(self.c.N_ASSETS)
-        self.sma60 = np.zeros(self.c.N_ASSETS)
+        self.hist = np.zeros((self.c.N_ASSETS, 60))
 
 
 class ExponentialMovingAverage(ITechnicalIndicator):
     def __init__(self, config):
         super().__init__(config)
-        n_time_steps, smoothing = 20, 2
-        self.k = smoothing / (n_time_steps + 1)
+        self.reset()
     
     def interpret(self, market_data):
         new = market_data[:, self.c.CLOSE_IX]
-        self.ema30 = new * self.k + self.ema30 * (1 - self.k)
-        self.ema60 = new * self.k + self.ema60 * (1 - self.k)
+        self.ema30 = (new + 29 * self.ema30) / 30
+        self.ema60 = (new + 59 * self.ema60) / 60
 
-    def get_indicators(self) -> list:
-        return [self.ema30, self.ema60]
+    def get_indicators(self) -> np.ndarray:
+        return np.column_stack((self.ema30, self.ema60))
     
     def reset(self):
         self.ema30 = np.zeros(self.c.N_ASSETS)
@@ -127,14 +127,19 @@ class AverageDirectionalIndex(ITechnicalIndicator):
     def _update_sma_true_range(self, market_data):
         TR = np.maximum.reduce([
             market_data[:, self.c.HIGH_IX] - market_data[:, self.c.LOW_IX],
-            market_data[:, self.c.HIGH_IX] - self.market[:, self.c.CLOSE_IX],
-            market_data[:, self.c.CLOSE_IX] - self.market[:, self.c.LOW_IX],
+            np.abs(market_data[:, self.c.HIGH_IX] - self.market[:, self.c.CLOSE_IX]),
+            np.abs(market_data[:, self.c.CLOSE_IX] - self.market[:, self.c.LOW_IX]),
         ])
-        self.sma_TR = self.sma_TR + (TR - self.sma_TR) / 14
+        self.TR_hist = shift_window(self.TR_hist, TR)
     
     def _update_ema_directional_movement(self, market_data):
-        dm_pos = market_data[:, self.c.HIGH_IX] - self.market[:, self.c.HIGH_IX]
-        dm_neg = market_data[:, self.c.LOW_IX] - self.market[:, self.c.LOW_IX]
+        dm_pos = np.maximum(market_data[:, self.c.HIGH_IX] \
+                            - self.market[:, self.c.HIGH_IX], 0)
+        dm_neg = np.maximum(self.market[:, self.c.LOW_IX] \
+                            - market_data[:, self.c.LOW_IX], 0)
+        dm_pos = np.where(dm_pos < dm_neg, 0, dm_pos)
+        dm_neg = np.where(dm_neg < dm_pos, 0, dm_neg)
+        
         self.ema_DM_pos = dm_pos * self.k + self.ema_DM_pos * (1 - self.k)
         self.ema_DM_neg = dm_neg * self.k + self.ema_DM_neg * (1 - self.k)
     
@@ -142,18 +147,19 @@ class AverageDirectionalIndex(ITechnicalIndicator):
         self.market = market_data
 
     def _update_average_directional_index(self):
-        di_pos = 100 * self.ema_DM_pos / self.sma_TR
-        di_neg = 100 * self.ema_DM_neg / self.sma_TR
-        adx = 100 * np.abs(di_pos - di_neg) / np.abs(di_pos + di_neg)
+        sma_TR = self.TR_hist.mean(axis=1)
+        di_pos = 100 * self.ema_DM_pos / sma_TR
+        di_neg = 100 * self.ema_DM_neg / sma_TR
+        dx = 100 * np.abs(di_pos - di_neg) / (di_pos + di_neg)
         self.prev_adx = self.adx.copy()
-        self.adx = adx * self.k + self.adx * (1 - self.k)
+        self.adx = dx * self.k + self.adx * (1 - self.k)
 
-    def get_indicators(self) -> list:
-        return [self.adx, self.prev_adx, self.ema_DM_neg, self.ema_DM_pos]
+    def get_indicators(self) -> np.ndarray:
+        return np.column_stack((self.adx, self.prev_adx, self.ema_DM_neg, self.ema_DM_pos))
 
     def reset(self):
         self.market = np.zeros((self.c.N_ASSETS, self.c.N_VARIABLES))
-        self.sma_TR = np.zeros(self.c.N_ASSETS)
+        self.TR_hist = np.zeros((self.c.N_ASSETS, 14))
         self.ema_DM_pos = np.zeros(self.c.N_ASSETS)
         self.ema_DM_neg = np.zeros(self.c.N_ASSETS)
         self.prev_adx = np.zeros(self.c.N_ASSETS)
@@ -166,17 +172,17 @@ class Aroon(ITechnicalIndicator):
         self.reset()
     
     def interpret(self, market_data):
-        self.high = np.concatenate((self.high[:, 1:], market_data[:, self.c.HIGH_IX]), axis=1)
-        self.low = np.concatenate((self.low[:, 1:], market_data[:, self.c.LOW_IX]), axis=1)
-        self.aroon_up = (np.nanargmax(self.high) + 1) * 4  # = * 100 / 25
-        self.aroon_down = (np.nanargmin(self.low) + 1) * 4  # = * 100 / 25
+        self.high = shift_window(self.high, market_data[:, self.c.HIGH_IX])
+        self.low = shift_window(self.low, market_data[:, self.c.LOW_IX])
+        self.aroon_up = (np.nanargmax(self.high, axis=1)) * 4  # = * 100 / 25
+        self.aroon_down = (np.nanargmin(self.low, axis=1)) * 4  # = * 100 / 25
 
-    def get_indicators(self) -> list:
-        return [self.aroon_up, self.aroon_down]
+    def get_indicators(self) -> np.ndarray:
+        return np.column_stack((self.aroon_up, self.aroon_down))
 
     def reset(self):
-        self.high = np.full((self.c.N_ASSETS, 25), np.nan)
-        self.low = np.full((self.c.N_ASSETS, 25), np.nan)
+        self.high = np.full((self.c.N_ASSETS, 26), np.nan)
+        self.low = np.full((self.c.N_ASSETS, 26), np.nan)
         self.aroon_up = np.zeros(self.c.N_ASSETS)
         self.aroon_down = np.zeros(self.c.N_ASSETS)
 
@@ -193,8 +199,8 @@ class MovingAverageConvergenceDivergence(ITechnicalIndicator):
         self.macd = self.ema_12 - self.ema_26
         self.ema_macd = (self.macd + 8 * self.ema_macd) * (1 / 9)
 
-    def get_indicators(self) -> list:
-        return [self.macd, self.ema_macd]
+    def get_indicators(self) -> np.ndarray:
+        return np.column_stack((self.macd, self.ema_macd))
     
     def reset(self):
         self.macd = np.zeros(self.c.N_ASSETS)
@@ -216,13 +222,14 @@ class RelativeStrengthIndex(ITechnicalIndicator):
         new_close = market_data[:, self.c.CLOSE_IX]
         up = np.maximum(new_close - self.latest_close, 0)
         down = np.maximum(self.latest_close - new_close, 0)
+        self.latest_close = new_close
         self.ema_up_change = (up + 13 * self.ema_up_change) * (1 / 14)
         self.ema_down_change = (down + 13 * self.ema_down_change) * (1 / 14)
         RS = self.ema_up_change / self.ema_down_change
         self.rsi = 100 - 100 / (1 + RS)
 
-    def get_indicators(self) -> list:
-        return [self.rsi]
+    def get_indicators(self) -> np.ndarray:
+        return self.rsi[:, None]
 
     def reset(self):
         self.latest_close = np.zeros(self.c.N_ASSETS)
@@ -246,8 +253,8 @@ class AccumulationDistribution(ITechnicalIndicator):
         CMFV = MFM * market_data[:, self.c.VOLUME_IX]
         self.ad = self.ad + CMFV
 
-    def get_indicators(self) -> list:
-        return [self.ad]
+    def get_indicators(self) -> np.ndarray:
+        return self.ad[:, None]
 
     def reset(self):
         self.ad = np.zeros(self.c.N_ASSETS)
@@ -265,19 +272,17 @@ class BollingerBands(ITechnicalIndicator):
         TP = np.mean(
             market_data[:, [self.c.HIGH_IX, self.c.LOW_IX, self.c.CLOSE_IX]],
             axis=1)
-        old_sma_tp = self.sma_tp.copy()
-        self.sma_tp = self.sma_tp + (TP - self.sma_tp) / 20
-        self.dn2 = self.dn2 + (TP - self.sma_tp) * (TP - old_sma_tp)
+        self.tp_hist = shift_window(self.tp_hist, TP)
 
-    def get_indicators(self) -> list:
-        std_tp = np.sqrt(self.dn2 / 20)
-        bol_up = self.sma_tp + 2 * std_tp
-        bol_down = self.sma_tp - 2 * std_tp
-        return [bol_up, bol_down]
+    def get_indicators(self) -> np.ndarray:
+        std_tp = np.std(self.tp_hist, axis=1)
+        sma_tp = np.mean(self.tp_hist, axis=1)
+        bol_up = sma_tp + 2 * std_tp
+        bol_down = sma_tp - 2 * std_tp
+        return np.column_stack((bol_up, bol_down))  # Consider adding the difference between the 2
 
     def reset(self):
-        self.sma_tp = np.zeros(self.c.N_ASSETS)
-        self.dn2 = np.zeros(self.c.N_ASSETS)
+        self.tp_hist = np.zeros((self.c.N_ASSETS, 20))
 
 
 class StochasticOscillator(ITechnicalIndicator):
@@ -286,23 +291,27 @@ class StochasticOscillator(ITechnicalIndicator):
         self.reset()
     
     def interpret(self, market_data):
+        self._update_hist(market_data)
         closing_price = market_data[:, self.c.CLOSE_IX]
         l14 = np.min(self.low14, axis=1)
         h14 = np.max(self.high14, axis=1)
         self.indicator = 100 * (closing_price - l14) / (h14 - l14)
-        self.sma = self.sma + (self.indicator - self.sma) / 3
+        self.indicator_hist = shift_window(self.indicator_hist, self.indicator)
+
+    def _update_hist(self, market_data):
         ix = self.counter % 14
+        self.counter += 1
         self.low14[:, ix] = market_data[:, self.c.LOW_IX]
         self.high14[:, ix] = market_data[:, self.c.HIGH_IX]
-        self.counter += 1
 
-    def get_indicators(self) -> list:
-        return [self.indicator, self.sma]
+    def get_indicators(self) -> np.ndarray:
+        sma = self.indicator_hist.mean(axis=1)
+        return np.column_stack((self.indicator, sma))
 
     def reset(self):
         self.counter = 0
+        self.indicator_hist = np.zeros((self.c.N_ASSETS, 3))
         self.indicator = np.zeros(self.c.N_ASSETS)
-        self.sma = np.zeros(self.c.N_ASSETS)
         self.low14 = np.zeros((self.c.N_ASSETS, 14))
         self.high14 = np.zeros((self.c.N_ASSETS, 14))
 
@@ -316,16 +325,15 @@ class CommodityChannelIndex(ITechnicalIndicator):
         TP = np.mean(
             market_data[:, [self.c.HIGH_IX, self.c.LOW_IX, self.c.CLOSE_IX]],
             axis=1)
+        self.tp_hist = shift_window(self.tp_hist, TP)
+        diff = TP - self.tp_hist.mean(axis=1)
+        self.diff_hist = shift_window(self.diff_hist, diff)
+        self.cci = diff * (1 / (0.015 * np.abs(self.diff_hist).mean(axis=1)))
 
-        self.sma_tp = self.sma_tp + (TP - self.sma_tp) / 20
-        diff = TP - self.sma_tp
-        self.sma_diff = self.sma_diff + np.abs(diff - self.sma_diff) / 20
-        self.cci = diff / (0.015 * self.sma_diff)
-
-    def get_indicators(self) -> list:
-        return [self.cci]
+    def get_indicators(self) -> np.ndarray:
+        return self.cci[:, None]
     
     def reset(self):
-        self.sma_tp = np.zeros(self.c.N_ASSETS)
-        self.sma_diff = np.zeros(self.c.N_ASSETS)
+        self.tp_hist = np.zeros((self.c.N_ASSETS, 20))
+        self.diff_hist = np.zeros((self.c.N_ASSETS, 20))
         self.cci = np.zeros(self.c.N_ASSETS)

@@ -1,8 +1,9 @@
 import numpy as np
+from configs import TestConfig
 
 from trader.converters import ActionConverter, MarketInterpreter
+from trader.indicators import CommodityChannelIndex, OnBalanceVolume
 from trader.validators import BookKeeper
-from configs import TestConfig
 
 
 class TestActionConverter:
@@ -18,23 +19,19 @@ class TestActionConverter:
 
 
 class TestMarketInterpreter:
+    technical_indicators = [CommodityChannelIndex(TestConfig),
+                            OnBalanceVolume(TestConfig)]
+    market_interpreter = MarketInterpreter(technical_indicators)
     
-    market_interpreter = MarketInterpreter(TestConfig, )
-    
-    def test_on_balance_volume(self):
+    def test_interpret(self):
         market = np.array([[6.80400000e-02, 6.80800000e-02, 6.79900000e-02, 6.80000000e-02,
                             1.13136248e+04, 1.80000000e+01, 1.00000000e+00],
                            [3.92500000e+00, 3.92700000e+00, 3.90800000e+00, 3.91400000e+00,
                             1.25406378e+03, 4.00000000e+00, 1.00000000e+00]])
-        self.market_interpreter._on_balance_volume(market)
-        obv1 = self.market_interpreter.obv.copy()
-        self.market_interpreter.market_data = market.copy()
-        market[:, TestConfig.CLOSE_IX] = np.array([0.068, 3.8])
-        self.market_interpreter._on_balance_volume(market)
+        indicators = self.market_interpreter.interpret(market)
         try:
-            np.testing.assert_allclose(obv1,
-                                       np.array([11313.6248 ,  1254.06378]))
-            np.testing.assert_allclose(self.market_interpreter.obv,
-                                       np.array([11313.6248, 0.]))
+            np.testing.assert_allclose(indicators,
+                                       np.array([1333.33333333, 11313.6248, 1077.48807619],
+                                                [1333.33333333, 1254.06378, 119.43464571]]))
         finally:
             self.market_interpreter.reset()

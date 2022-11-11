@@ -43,14 +43,15 @@ class ActionConverter(object):
 
 
 class MarketInterpreter:
-    def __init__(self, indicators: List[ITechnicalIndicator], config):
-        self.c = config
+    def __init__(self, indicators: list[ITechnicalIndicator]):
         self.indicators = indicators
 
     def interpret(self, market_data: np.ndarray) -> np.ndarray:
-        interpretation = [indicator.interpret(market_data) 
-                          for indicator in self.indicators]
-        return np.array(interpretation)
+        interpretation = []
+        for indicator in self.indicators:
+            indicator.interpret(market_data)
+            interpretation.append(indicator.get_indicators())
+        return np.hstack(interpretation)
     
     def reset(self):
         for indicator in self.indicators:
