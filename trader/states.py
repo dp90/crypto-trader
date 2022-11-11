@@ -3,6 +3,7 @@ from rltools.states import IStateProcessor
 from rltools.utils import Scaler
 
 from trader.converters import ActionConverter
+from trader.simulate import BinanceSimulator
 from trader.validators import BookKeeper
 
 
@@ -20,7 +21,7 @@ class StateProcessor(IStateProcessor):
         market_data = self.binance.get_market_data()
         statistics = self.interpreter.interpret(market_data)
         portfolio = self.binance.portfolio
-        self.book_keeper.update(portfolio)
+        self.book_keeper.update(portfolio, market_data[:, self.binance.c.CLOSE_IX])
         return np.concatenate((statistics, portfolio))
 
     def update_state(self, state: np.ndarray, action: np.ndarray) -> np.ndarray:
@@ -28,10 +29,10 @@ class StateProcessor(IStateProcessor):
         # so state function parameter is unused. 
         orders = self.converter.convert(action)
         market_data, portfolio = self.binance.execute(orders)
-        self.book_keeper.update(portfolio)
+        self.book_keeper.update(portfolio, market_data[:, self.binance.c.CLOSE_IX])
         statistics = self.interpreter.interpret(market_data)
         return np.concatenate((statistics, portfolio))
 
     def reset(self) -> None:
         self.binance.reset()
-        self.book_keeper.reset()
+        # self.book_keeper.reset()

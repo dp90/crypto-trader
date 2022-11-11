@@ -9,16 +9,18 @@ LoggingConfig.add_config_to_logger(logger)
 
 
 class BinanceSimulator:
-    def __init__(self, data_loader: BinanceDataLoader, portfolio: np.ndarray):
+    def __init__(self, data_loader: BinanceDataLoader, portfolio: np.ndarray,
+                 config):
         self.data_loader = data_loader
         self.portfolio = portfolio
+        self.c = config
 
     def execute(self, order):
         self._is_valid(order)
-        market = self._get_market_data()
-        trade = self._is_executable(order, market)
-        self._update_portfolio(trade)
-        return self._get_market_data(), self.portfolio
+        market = self.get_market_data()
+        trades = self._get_trades(order, market)
+        self._update_portfolio(trades)
+        return market, self.portfolio
 
     def _is_valid(self, order) -> bool:
         # Check if requested order volumes are possible given current portfolio.
@@ -27,27 +29,32 @@ class BinanceSimulator:
             logger.error(f"Sell order cannot exceed amount in portfolio: \n\
                 order: {order},\nportfolio: {self.portfolio}")
             raise ValueError
-        if order.sum() != 0.0:
-            logger.error(f"Order should sum to 0.0, but sums to {order.sum()}")
-            raise ValueError
         return True
 
-    def _is_executable(self, order, market) -> np.ndarray:
-        # Check data if order can be executed:
-        # - Enough trades
-        # - Enough trade volume
-        # Return how much of the order can be fullfilled
-        return np.zeros(1)
+    def _get_trades(self, order, market) -> np.ndarray:
+        """
+        Uses the opening market price as a reference: slippage and transaction
+        fees are added to that price. Negative costs are an addition, so that
+        negative costs are reduced with slippage and fees, while positive ones
+        are increased.
+        """
+        price = market[:, self.c.OPEN_IX]
+        cash_cost = order[1:] * price
+        cash_cost = np.where(cash_cost > 0,
+                             cash_cost * (1 + self.c.SLIPPAGE),
+                             cash_cost * (1 - self.c.SLIPPAGE))
+        cash_cost = np.where(cash_cost > 0,
+                             cash_cost * (1 + self.c.TRANSACTION_FEE),
+                             cash_cost * (1 - self.c.TRANSACTION_FEE))
+        trades = np.zeros_like(order)
+        trades[1:] = order[1:]
+        trades[0] -= cash_cost.sum()
+        return trades
 
-    def _update_portfolio(self, trade):
-        # Takes latest close and adds slippage
-        # Computes the new asset amounts
-        # Computes the transaction costs
-        # Deducts the transaction costs
-        # self.portfolio = something
-        pass
+    def _update_portfolio(self, trades):
+        self.portfolio += trades
 
-    def _get_market_data(self) -> np.ndarray:
+    def get_market_data(self) -> np.ndarray:
         """
         Gets the next observation of the markets, including
         TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, N_TRADES for each currency.
@@ -71,3 +78,4 @@ class BinanceSimulator:
         - Intial portfolio? Or should that continue from last known pf?
         """
         self.data_loader.reset()
+        raise NotImplementedError

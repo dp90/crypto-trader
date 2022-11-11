@@ -7,11 +7,13 @@ from rltools.azure.utils import parse_hyperparameter_args
 from rltools.agents import MLPCritic, PpoGaussianActor
 from rltools.utils import Scaler, LoggingConfig
 
-from configs import DirectoryConfig as DIR, TradingConfig as TC
+from configs import DirectoryConfig as DIR, TradingConfig as TC, \
+    SimulationConfig as SC
 from trader.converters import ActionConverter
 from trader.data_loader import BinanceDataLoader
 from trader.environment import BinanceEnvironment
 from trader.rewards import RewardGenerator
+from trader.simulate import BinanceSimulator
 from trader.states import StateProcessor
 from trader.validators import BookKeeper
 
@@ -26,13 +28,14 @@ def train(hp):
     data_loader = BinanceDataLoader(DIR.DATA, TC)
     scaler = Scaler({})
 
-    binance_simulator = BinanceSimulator(data_loader)
-    book_keeper = BookKeeper(TC.INITIAL_PORTFOLIO)
+    binance_simulator = BinanceSimulator(data_loader, TC.INITIAL_PORTFOLIO.copy(), SC)
+    book_keeper = BookKeeper(TC.INITIAL_PORTFOLIO.copy(), 
+                             TC.INITIAL_EXCHANGE_RATE.copy())
     action_converter = ActionConverter(book_keeper)
-    market_interpreter = MarketInterpreter()
+    market_interpreter = MarketInterpreter(TC)
 
     state_processor = StateProcessor(scaler, binance_simulator, action_converter,
-                                     market_interpreter)
+                                     book_keeper, market_interpreter)
     env = BinanceEnvironment(state_processor, reward_generator)
 
     actor = PpoGaussianActor(OBS_DIM, ACTOR_DIMS, HIDDEN_SIZES, nn.ReLU(), 

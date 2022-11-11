@@ -7,16 +7,27 @@ LoggingConfig.add_config_to_logger(logger)
 
 
 class BookKeeper(object):
-    def __init__(self, portfolio: np.ndarray):
+    def __init__(self, portfolio: np.ndarray, 
+                 exchange_rate: np.ndarray):
         self.portfolio = portfolio
+        self.exchange_rate = exchange_rate
     
-    def update(self, portfolio: np.ndarray):
+    def get_portfolio_value(self):
+        return self.portfolio @ self.exchange_rate
+    
+    def update(self, portfolio: np.ndarray, exchange_rate: np.ndarray):
         if len(portfolio) != len(self.portfolio):
             logger.error(f'Too many assets is new portfolio: # new\
                 assets: {len(portfolio)}, # old assets: \
                 {len(self.portfolio)}')
             raise ValueError
+        if len(exchange_rate) != len(self.exchange_rate):
+            logger.error(f'Too many assets is new exchange_rate: # new\
+                exchange_rate: {len(exchange_rate)}, # old \
+                exchange_rate: {len(self.exchange_rate)}')
+            raise ValueError
         self.portfolio = portfolio
+        self.exchange_rate = exchange_rate
 
     def is_valid(self, action: np.ndarray) -> bool:
         """

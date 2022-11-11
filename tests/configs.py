@@ -6,9 +6,22 @@ RESOURCES_PATH = join(dirname(realpath(__file__)), 'resources')
 
 class TestConfig:
     START_CAPITAL = 1000
-    N_ASSETS = 5
     VARIABLES = ['TIME', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'N_TRADES']
     N_VARIABLES = len(VARIABLES)
-    CURRENCY_ICS = [1, 2, 3]
+    CURRENCY_ICS = [1, 2]
     CURRENCIES = ['ADA', 'ATOM']
-    INITIAL_PORTFOLIO = np.array([10, 25, 3])
+    N_ASSETS = len(CURRENCIES)
+    INITIAL_PORTFOLIO = np.array([10., 25., 3.])
+    INITIAL_EXCHANGE_RATE = np.array([1.0, 0.06804, 3.925])  # 1st asset is cash
+    OPEN_IX = 0
+    HIGH_IX = 1
+    LOW_IX = 2
+    CLOSE_IX = 3
+    VOLUME_IX = 4
+
+
+class SimulationConfig:
+    SLIPPAGE = 0.01
+    TRANSACTION_FEE = 0.001
+    OPEN_IX = 0
+    CLOSE_IX = 3

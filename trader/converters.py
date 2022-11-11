@@ -1,5 +1,7 @@
+from typing import List
 import numpy as np
 
+from trader.indicators import ITechnicalIndicator
 from trader.validators import BookKeeper
 
 
@@ -34,6 +36,22 @@ class ActionConverter(object):
             If requested trades are not possible with current portfolio.
         """
         self.book_keeper.is_valid(action)
-        desired_portfolio = action * self.book_keeper.portfolio.sum()
+        desired_pf_in_cash = action * self.book_keeper.get_portfolio_value()
+        desired_portfolio = desired_pf_in_cash / self.book_keeper.exchange_rate
         order = desired_portfolio - self.book_keeper.portfolio
         return order
+
+
+class MarketInterpreter:
+    def __init__(self, indicators: List[ITechnicalIndicator], config):
+        self.c = config
+        self.indicators = indicators
+
+    def interpret(self, market_data: np.ndarray) -> np.ndarray:
+        interpretation = [indicator.interpret(market_data) 
+                          for indicator in self.indicators]
+        return np.array(interpretation)
+    
+    def reset(self):
+        for indicator in self.indicators:
+            indicator.reset()
