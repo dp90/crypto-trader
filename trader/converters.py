@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import List
 import numpy as np
 
@@ -42,11 +43,35 @@ class ActionConverter(object):
         return order
 
 
-class MarketInterpreter:
+class IMarketInterpreter(ABC):
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def interpret(self, market_data: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+    
+    @abstractmethod
+    def reset(self):
+        raise NotImplementedError
+
+
+class MarketInterpreter(IMarketInterpreter):
     def __init__(self, indicators: list[ITechnicalIndicator]):
         self.indicators = indicators
 
     def interpret(self, market_data: np.ndarray) -> np.ndarray:
+        """
+        Parameters
+        ----------
+        market_data : np.ndarray
+            OHLC-Volume-#Trades in shape (n_assets, n_variables)
+
+        Returns
+        -------
+        np.ndarray
+            Technical indicators
+        """
         interpretation = []
         for indicator in self.indicators:
             indicator.interpret(market_data)
@@ -56,3 +81,15 @@ class MarketInterpreter:
     def reset(self):
         for indicator in self.indicators:
             indicator.reset()
+
+
+class DummyMarketInterpreter(IMarketInterpreter):
+    def __init__(self, trading_config):
+        self.config = trading_config
+
+    def interpret(self, market_data: np.ndarray) -> np.ndarray:
+        return market_data[self.config.N_VARIABLES:]
+
+    def reset(self):
+        pass
+    

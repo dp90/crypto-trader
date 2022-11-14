@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 from abc import ABC, abstractmethod
 
@@ -14,6 +15,10 @@ class ITechnicalIndicator(ABC):
     
     @abstractmethod
     def get_indicators(self) -> np.ndarray:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_indicator_names(self) -> list[str]:
         raise NotImplementedError
     
     @abstractmethod
@@ -47,6 +52,9 @@ class OnBalanceVolume(ITechnicalIndicator):
         """
         self.obv_ema = self.obv * self.k + self.obv_ema * (1 - self.k)
 
+    def get_indicator_names(self) -> list[str]:
+        return ['OnBalanceVolume', 'OnBalanceVolumeEMA']
+
     def reset(self):
         self.last_close = np.zeros(self.c.N_ASSETS)
         self.obv = np.zeros(self.c.N_ASSETS)
@@ -67,6 +75,9 @@ class AwesomeOscillator(ITechnicalIndicator):
     def get_indicators(self) -> np.ndarray:
         return (self.ema5 - self.ema34)[:, None]
 
+    def get_indicator_names(self) -> list[str]:
+        return ['AwesomeOscillator']
+
     def reset(self):
         self.ema34 = np.zeros(self.c.N_ASSETS)
         self.ema5 = np.zeros(self.c.N_ASSETS)
@@ -84,6 +95,9 @@ class SimpleMovingAverage(ITechnicalIndicator):
         sma30 = self.hist[:, -30:].mean(axis=1)
         sma60 = self.hist.mean(axis=1)
         return np.column_stack((sma30, sma60))
+    
+    def get_indicator_names(self) -> list[str]:
+        return ['SimpleMovingAverage30', 'SimpleMovingAverage60']
 
     def reset(self):
         self.hist = np.zeros((self.c.N_ASSETS, 60))
@@ -102,6 +116,9 @@ class ExponentialMovingAverage(ITechnicalIndicator):
     def get_indicators(self) -> np.ndarray:
         return np.column_stack((self.ema30, self.ema60))
     
+    def get_indicator_names(self) -> list[str]:
+        return ['ExponentialMovingAverage30', 'ExponentialMovingAverage60']
+
     def reset(self):
         self.ema30 = np.zeros(self.c.N_ASSETS)
         self.ema60 = np.zeros(self.c.N_ASSETS)
@@ -119,12 +136,12 @@ class AverageDirectionalIndex(ITechnicalIndicator):
         self.reset()
     
     def interpret(self, market_data):
-        self._update_sma_true_range(market_data)
+        self._update_hist_true_range(market_data)
         self._update_ema_directional_movement(market_data)
         self._update_market_data(market_data)
         self._update_average_directional_index()
 
-    def _update_sma_true_range(self, market_data):
+    def _update_hist_true_range(self, market_data):
         TR = np.maximum.reduce([
             market_data[:, self.c.HIGH_IX] - market_data[:, self.c.LOW_IX],
             np.abs(market_data[:, self.c.HIGH_IX] - self.market[:, self.c.CLOSE_IX]),
@@ -148,14 +165,24 @@ class AverageDirectionalIndex(ITechnicalIndicator):
 
     def _update_average_directional_index(self):
         sma_TR = self.TR_hist.mean(axis=1)
-        di_pos = 100 * self.ema_DM_pos / sma_TR
-        di_neg = 100 * self.ema_DM_neg / sma_TR
-        dx = 100 * np.abs(di_pos - di_neg) / (di_pos + di_neg)
+        di_pos = 100 * np.divide(self.ema_DM_pos, sma_TR, 
+                                 out=np.zeros_like(sma_TR),
+                                 where=sma_TR!=0)
+        di_neg = 100 * np.divide(self.ema_DM_neg, sma_TR, 
+                                 out=np.zeros_like(sma_TR),
+                                 where=sma_TR!=0)
+        dx = 100 * np.divide(np.abs(di_pos - di_neg), di_pos + di_neg,
+                             out=np.zeros_like(di_pos), 
+                             where=(di_pos + di_neg)!=0.0)
         self.prev_adx = self.adx.copy()
         self.adx = dx * self.k + self.adx * (1 - self.k)
 
     def get_indicators(self) -> np.ndarray:
         return np.column_stack((self.adx, self.prev_adx, self.ema_DM_neg, self.ema_DM_pos))
+    
+    def get_indicator_names(self) -> list[str]:
+        return ['AverageDirectionalIndex', 'PrevAverageDirectionalIndex',
+            'NegDirectionalMovementEMA', 'PosDirectionalMovementEMA']
 
     def reset(self):
         self.market = np.zeros((self.c.N_ASSETS, self.c.N_VARIABLES))
@@ -180,6 +207,9 @@ class Aroon(ITechnicalIndicator):
     def get_indicators(self) -> np.ndarray:
         return np.column_stack((self.aroon_up, self.aroon_down))
 
+    def get_indicator_names(self) -> list[str]:
+        return ['AroonUp', 'AroonDown']
+
     def reset(self):
         self.high = np.full((self.c.N_ASSETS, 26), np.nan)
         self.low = np.full((self.c.N_ASSETS, 26), np.nan)
@@ -201,6 +231,10 @@ class MovingAverageConvergenceDivergence(ITechnicalIndicator):
 
     def get_indicators(self) -> np.ndarray:
         return np.column_stack((self.macd, self.ema_macd))
+
+    def get_indicator_names(self) -> list[str]:
+        return ['MovingAverageConvergenceDivergence',
+            'MovingAverageConvergenceDivergenceEMA']
     
     def reset(self):
         self.macd = np.zeros(self.c.N_ASSETS)
@@ -230,11 +264,14 @@ class RelativeStrengthIndex(ITechnicalIndicator):
 
     def get_indicators(self) -> np.ndarray:
         return self.rsi[:, None]
+    
+    def get_indicator_names(self) -> list[str]:
+        return ['RelativeStrengthIndex']
 
     def reset(self):
         self.latest_close = np.zeros(self.c.N_ASSETS)
-        self.ema_up_change = np.zeros(self.c.N_ASSETS)
-        self.ema_down_change = np.zeros(self.c.N_ASSETS)
+        self.ema_up_change = np.zeros(self.c.N_ASSETS) + 1e-7
+        self.ema_down_change = np.zeros(self.c.N_ASSETS) + 1e-7
         self.rsi = np.zeros(self.c.N_ASSETS)
 
 
@@ -247,14 +284,18 @@ class AccumulationDistribution(ITechnicalIndicator):
         self.reset()
 
     def interpret(self, market_data):
-        MFM = ((market_data[:, self.c.CLOSE_IX] - market_data[:, self.c.LOW_IX])\
-            - (market_data[:, self.c.HIGH_IX] - market_data[:, self.c.CLOSE_IX]))\
-            / (market_data[:, self.c.HIGH_IX] - market_data[:, self.c.LOW_IX])
+        a = ((market_data[:, self.c.CLOSE_IX] - market_data[:, self.c.LOW_IX])\
+            - (market_data[:, self.c.HIGH_IX] - market_data[:, self.c.CLOSE_IX]))
+        b = (market_data[:, self.c.HIGH_IX] - market_data[:, self.c.LOW_IX])
+        MFM = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
         CMFV = MFM * market_data[:, self.c.VOLUME_IX]
         self.ad = self.ad + CMFV
 
     def get_indicators(self) -> np.ndarray:
         return self.ad[:, None]
+
+    def get_indicator_names(self) -> list[str]:
+        return ['AccumulationDistribution']
 
     def reset(self):
         self.ad = np.zeros(self.c.N_ASSETS)
@@ -281,6 +322,9 @@ class BollingerBands(ITechnicalIndicator):
         bol_down = sma_tp - 2 * std_tp
         return np.column_stack((bol_up, bol_down))  # Consider adding the difference between the 2
 
+    def get_indicator_names(self) -> list[str]:
+        return ['BollingerBandsUp', 'BollingerBandsDown']
+
     def reset(self):
         self.tp_hist = np.zeros((self.c.N_ASSETS, 20))
 
@@ -295,7 +339,9 @@ class StochasticOscillator(ITechnicalIndicator):
         closing_price = market_data[:, self.c.CLOSE_IX]
         l14 = np.min(self.low14, axis=1)
         h14 = np.max(self.high14, axis=1)
-        self.indicator = 100 * (closing_price - l14) / (h14 - l14)
+        self.indicator = 100 * np.divide(closing_price - l14, h14 - l14,
+                                         out=np.zeros_like(h14), 
+                                         where=(h14 - l14)!=0.0)
         self.indicator_hist = shift_window(self.indicator_hist, self.indicator)
 
     def _update_hist(self, market_data):
@@ -307,6 +353,9 @@ class StochasticOscillator(ITechnicalIndicator):
     def get_indicators(self) -> np.ndarray:
         sma = self.indicator_hist.mean(axis=1)
         return np.column_stack((self.indicator, sma))
+
+    def get_indicator_names(self) -> list[str]:
+        return ['StochasticOscillator', 'StochasticOscillatorSMA']
 
     def reset(self):
         self.counter = 0
@@ -332,7 +381,10 @@ class CommodityChannelIndex(ITechnicalIndicator):
 
     def get_indicators(self) -> np.ndarray:
         return self.cci[:, None]
-    
+
+    def get_indicator_names(self) -> list[str]:
+        return ['CommodityChannelIndex']
+
     def reset(self):
         self.tp_hist = np.zeros((self.c.N_ASSETS, 20))
         self.diff_hist = np.zeros((self.c.N_ASSETS, 20))

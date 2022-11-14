@@ -10,15 +10,10 @@ from rltools.utils import Scaler, LoggingConfig
 from configs import DirectoryConfig as DIR, TradingConfig as TC, \
     SimulationConfig as SC
 from utils import extract_neural_net_dims
-from trader.converters import ActionConverter, MarketInterpreter
-from trader.data_loader import BinanceDataLoader
 from trader.environment import BinanceEnvironment
 from trader.evaluation import evaluate
-from trader.indicators import collect_indicators
 from trader.rewards import RewardGenerator
-from trader.simulate import BinanceSimulator
-from trader.states import StateProcessor
-from trader.validators import BookKeeper
+from trader.states import create_hist_state_processor
 
 logger = logging.getLogger(__name__)
 LoggingConfig.add_config_to_logger(logger)
@@ -31,18 +26,8 @@ def train(hp):
     OBS_DIM = TC.N_VARIABLES
 
     reward_generator = RewardGenerator(TC)
-    data_loader = BinanceDataLoader(DIR.DATA, TC)
-    scaler = Scaler({})
-
-    binance_simulator = BinanceSimulator(data_loader, TC.INITIAL_PORTFOLIO.copy(), SC)
-    book_keeper = BookKeeper(TC.INITIAL_PORTFOLIO.copy(), 
-                             TC.INITIAL_EXCHANGE_RATE.copy())
-    action_converter = ActionConverter(book_keeper)
-    market_interpreter = MarketInterpreter(collect_indicators(TC))
-
-    state_processor = StateProcessor(scaler, binance_simulator, action_converter,
-                                     book_keeper, market_interpreter)
-    env = BinanceEnvironment(state_processor, reward_generator)
+    hist_state_processor = create_hist_state_processor(TC, SC, DIR.DATA)
+    env = BinanceEnvironment(hist_state_processor, reward_generator)
 
     actor = PpoGaussianActor(OBS_DIM, ACTION_DIM, hp.actor_hidden_dims, nn.ReLU(), 
                              nn.Softmax(dim=-1), hp.action_log_std)

@@ -10,11 +10,14 @@ class DirectoryConfig(object):
     RESULTS = os.path.join(LOGS, 'results')
     MODELS = os.path.join(ROOT, 'models')
     DATA = os.path.join(ROOT, 'data')
+    DATA_PROCESSED = os.path.join(DATA, 'processed')
+    DATA_RAW = os.path.join(DATA, 'raw')
 
 
 class TradingConfig:
     START_CAPITAL = 1000
-    VARIABLES = ['TIME', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 'N_TRADES']
+    VARIABLES = ['TIME', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'VOLUME', 
+        'N_TRADES', 'TIME_INDEX']
     N_VARIABLES = len(VARIABLES)
     CURRENCY_ICS = [1, 2, 3]
     CURRENCIES = ['ADA', 'ATOM', 'BNB', 'BTC', 'ETH', 'LINK', 'LTC', 'TRX',
