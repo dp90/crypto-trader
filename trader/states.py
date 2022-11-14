@@ -2,7 +2,7 @@ import numpy as np
 from rltools.states import IStateProcessor
 from rltools.utils import Scaler
 
-from trader.converters import ActionConverter
+from trader.converters import ActionConverter, MarketInterpreter
 from trader.simulate import BinanceSimulator
 from trader.validators import BookKeeper
 

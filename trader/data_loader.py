@@ -14,6 +14,7 @@ class BinanceDataLoader(object):
         self.config = config
         self.data = self._load_data(path)
         self.index = 0
+        self.is_final_time_step = False
 
     def _load_data(self, path):
         raw = self._read_data(path)
@@ -54,7 +55,10 @@ class BinanceDataLoader(object):
             logger.error("Data loader ran out of historic data.")
             raise
         self.index += 1
+        if self.index == self.data.shape[1]:
+            self.is_final_time_step = True
         return data
 
     def reset(self):
         self.index = 0
+        self.is_final_time_step = False

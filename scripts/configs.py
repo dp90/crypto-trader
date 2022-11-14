@@ -3,7 +3,7 @@ import os
 
 
 class DirectoryConfig(object):
-    ROOT = os.path.dirname(__file__)
+    ROOT = os.path.join(os.path.dirname(__file__), '..')
     VISUALS = os.path.join(ROOT, 'visuals')
     IMAGES = os.path.join(VISUALS, 'images')
     LOGS = os.path.join(ROOT, 'logs')

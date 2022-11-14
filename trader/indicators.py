@@ -337,3 +337,20 @@ class CommodityChannelIndex(ITechnicalIndicator):
         self.tp_hist = np.zeros((self.c.N_ASSETS, 20))
         self.diff_hist = np.zeros((self.c.N_ASSETS, 20))
         self.cci = np.zeros(self.c.N_ASSETS)
+
+
+def collect_indicators(config) -> list[ITechnicalIndicator]:
+    return [
+        OnBalanceVolume(config),
+        AwesomeOscillator(config),
+        SimpleMovingAverage(config),
+        ExponentialMovingAverage(config),
+        AverageDirectionalIndex(config),
+        Aroon(config),
+        MovingAverageConvergenceDivergence(config),
+        RelativeStrengthIndex(config),
+        AccumulationDistribution(config),
+        BollingerBands(config),
+        StochasticOscillator(config),
+        CommodityChannelIndex(config),
+    ]
