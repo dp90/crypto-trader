@@ -2,15 +2,18 @@ import numpy as np
 from rltools.states import IStateProcessor
 from rltools.utils import Scaler
 
-from trader.converters import ActionConverter, DummyMarketInterpreter, IMarketInterpreter
+from trader.converters import IOrderConverter, MarketOrderConverter, \
+    LimitOrderConverter, DummyMarketInterpreter, IMarketInterpreter
 from trader.data_loader import BinanceDataLoader
-from trader.simulate import BinanceSimulator
+from trader.simulate import IBinanceSimulator, MarketOrderBinanceSimulator, \
+    LimitOrderBinanceSimulator
+from trader.utils import get_scale_config
 from trader.validators import BookKeeper
 
 
 class StateProcessor(IStateProcessor):
-    def __init__(self, scaler: Scaler, binance_simulator: BinanceSimulator,
-                 action_converter: ActionConverter, book_keeper: BookKeeper,
+    def __init__(self, scaler: Scaler, binance_simulator: IBinanceSimulator,
+                 action_converter: IOrderConverter, book_keeper: BookKeeper,
                  market_interpreter: IMarketInterpreter):
         super().__init__(scaler)
         self.binance = binance_simulator  # Statefull
@@ -23,7 +26,7 @@ class StateProcessor(IStateProcessor):
         statistics = self.interpreter.interpret(market_data)
         portfolio = self.binance.portfolio
         self.book_keeper.update(portfolio, market_data[:, self.binance.c.CLOSE_IX])
-        return np.concatenate((statistics, portfolio))
+        return np.hstack((statistics.flatten(), portfolio))
 
     def update_state(self, state: np.ndarray, action: np.ndarray) -> np.ndarray:
         # Relevant info in state is portfolio, but that is obtained from Binance, 
@@ -32,23 +35,40 @@ class StateProcessor(IStateProcessor):
         market_data, portfolio = self.binance.execute(orders)
         self.book_keeper.update(portfolio, market_data[:, self.binance.c.CLOSE_IX])
         statistics = self.interpreter.interpret(market_data)
-        return np.concatenate((statistics, portfolio))
+        return np.hstack((statistics.flatten(), portfolio))
 
     def reset(self) -> None:
+        self.book_keeper.reset()
         self.binance.reset()
-        # self.book_keeper.reset()
 
 
-def create_hist_state_processor(trading_config, sim_config, path):
-    """Create state processor based on historic data"""
+def create_hist_state_processor(trading_config, path):
+    """
+    Create state processor based on historic data - 
+    executes market orders
+    """
     data_loader = BinanceDataLoader(path, trading_config)
-    binance_simulator = BinanceSimulator(data_loader, 
-                                         trading_config.INITIAL_PORTFOLIO.copy(), 
-                                         sim_config)
-    book_keeper = BookKeeper(trading_config.INITIAL_PORTFOLIO.copy(), 
-                             trading_config.INITIAL_EXCHANGE_RATE.copy())
-    action_converter = ActionConverter(book_keeper)
+    binance_simulator = MarketOrderBinanceSimulator(data_loader, trading_config)
+    book_keeper = BookKeeper(trading_config)
+    action_converter = MarketOrderConverter(book_keeper)
     market_interpreter = DummyMarketInterpreter(trading_config)
-    scaler = Scaler({})
+    indicator_data = data_loader.data[:, :, trading_config.N_VARIABLES - 6:]
+    scaler = Scaler(get_scale_config(trading_config, indicator_data))
+    return StateProcessor(scaler, binance_simulator, action_converter,
+                          book_keeper, market_interpreter)
+
+
+def create_limit_order_state_processor(trading_config, path):
+    """
+    Create state processor based on historic data - 
+    executes market orders
+    """
+    data_loader = BinanceDataLoader(path, trading_config)
+    binance_simulator = LimitOrderBinanceSimulator(data_loader, trading_config)
+    book_keeper = BookKeeper(trading_config)
+    action_converter = LimitOrderConverter(book_keeper)
+    market_interpreter = DummyMarketInterpreter(trading_config)
+    indicator_data = data_loader.data[:, :, trading_config.N_VARIABLES - 6:]
+    scaler = Scaler(get_scale_config(trading_config, indicator_data))
     return StateProcessor(scaler, binance_simulator, action_converter,
                           book_keeper, market_interpreter)

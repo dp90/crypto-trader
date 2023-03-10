@@ -2,14 +2,13 @@ import pytest
 import numpy as np
 
 from trader.data_loader import BinanceDataLoader
-from trader.simulate import BinanceSimulator
-from configs import RESOURCES_PATH, TestConfig as TC, \
-    SimulationConfig as SC
+from trader.simulate import MarketOrderBinanceSimulator, LimitOrderBinanceSimulator
+from configs import RESOURCES_PATH, TestConfig as TC
 
 
-class TestBinanceSimulator:
+class TestMarketOrderBinanceSimulator:
     data_loader = BinanceDataLoader(RESOURCES_PATH, TC)
-    simulator = BinanceSimulator(data_loader, TC.INITIAL_PORTFOLIO.copy(), SC)
+    simulator = MarketOrderBinanceSimulator(data_loader, TC)
 
     def test_is_valid(self):
         order = np.array([-0.5, -13.6, 14.1])
@@ -27,7 +26,7 @@ class TestBinanceSimulator:
                              [3.92500000e+00, 3.92700000e+00, 3.90800000e+00, 3.91400000e+00,
                               1.25406378e+03, 4.00000000e+00, 1.00000000e+00]])
         try:
-            np.testing.assert_allclose(data, ref_data)
+            np.testing.assert_allclose(data[:, :7], ref_data)
         finally:
             self.simulator.data_loader.reset()
 
@@ -66,5 +65,18 @@ class TestBinanceSimulator:
                                    [3.92500000e+00, 3.92700000e+00, 3.90800000e+00, 3.91400000e+00,
                                      1.25406378e+03, 4.00000000e+00, 1.00000000e+00]])
         ref_portfolio = np.array([5.7968801, 103.50970018, 2.69151592])
-        np.testing.assert_allclose(market_data, ref_market_data)
+        np.testing.assert_allclose(market_data[:, :7], ref_market_data)
         np.testing.assert_allclose(portfolio, ref_portfolio)
+
+
+class TestLimitOrderBinanceSimulator:
+    data_loader = BinanceDataLoader(RESOURCES_PATH, TC)
+    simulator = LimitOrderBinanceSimulator(data_loader, TC)
+
+    def test_get_trades(self):
+        order = np.array([0., 0., 50., 10., 1., 10., 0., 0.])
+        market = np.array([[6.80400000e-02, 6.80800000e-02, 6.79900000e-02, 6.80000000e-02,
+                            1.13136248e+04, 1.80000000e+01, 1.00000000e+00],
+                           [3.92500000e+00, 3.92700000e+00, 3.90800000e+00, 3.91400000e+00,
+                            1.25406378e+03, 4.00000000e+00, 1.00000000e+00]])
+        self.simulator._get_trades(order, market)

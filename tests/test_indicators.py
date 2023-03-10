@@ -110,7 +110,7 @@ class TestAwesomeOscillator:
         indicators = self.indicator.get_indicators()
         try:
             np.testing.assert_allclose(indicators, 
-                                       np.array([0.0116068235294, 0.66955882352]))
+                                       np.array([[0.0116068235294], [0.66955882352]]))
         finally:
             self.indicator.reset()
 
@@ -325,9 +325,10 @@ class TestRelativeStrengthIndex:
         try:
             np.testing.assert_allclose(self.indicator.latest_close, np.array([0.068, 3.914]))
             np.testing.assert_allclose(self.indicator.ema_up_change,
-                                       np.array([0.004857142857142858, 0.2795714285714286]))
-            np.testing.assert_allclose(self.indicator.ema_down_change, np.zeros(2))
-            np.testing.assert_allclose(self.indicator.rsi, np.array([100.0, 100.0]))
+                                       np.array([0.0048572357142857145, 0.27957152142857145]))
+            np.testing.assert_allclose(self.indicator.ema_down_change, 
+                                       np.array([9.285714e-08, 9.285714e-08]))
+            np.testing.assert_allclose(self.indicator.rsi, np.array([99.998088, 99.999967]))
         finally:
             self.indicator.reset()
 
@@ -335,7 +336,7 @@ class TestRelativeStrengthIndex:
         self.indicator.interpret(self.market)
         indicators = self.indicator.get_indicators()
         try:
-            np.testing.assert_allclose(indicators, np.array([100.0, 100.0]))
+            np.testing.assert_allclose(indicators, np.array([[99.99808831], [99.99996679]]))
         finally:
             self.indicator.reset()
 
@@ -343,8 +344,8 @@ class TestRelativeStrengthIndex:
         self.indicator.interpret(self.market)
         self.indicator.reset()
         np.testing.assert_allclose(self.indicator.latest_close, np.zeros(2))
-        np.testing.assert_allclose(self.indicator.ema_up_change, np.zeros(2))
-        np.testing.assert_allclose(self.indicator.ema_down_change, np.zeros(2))
+        np.testing.assert_allclose(self.indicator.ema_up_change, np.zeros(2) + 1e-7)
+        np.testing.assert_allclose(self.indicator.ema_down_change, np.zeros(2) + 1e-7)
         np.testing.assert_allclose(self.indicator.rsi, np.zeros(2))
 
 
@@ -445,7 +446,7 @@ class TestCommodityChannelIndex:
         indicators = self.indicator.get_indicators()
         try:
             np.testing.assert_allclose(indicators, 
-                                       np.array([1333.33333333, 1333.33333333]))
+                                       np.array([[1333.33333333], [1333.33333333]]))
         finally:
             self.indicator.reset()
 

@@ -26,6 +26,27 @@ class ITechnicalIndicator(ABC):
         raise NotImplementedError
 
 
+class Returns(ITechnicalIndicator):
+    def __init__(self, config):
+        super().__init__(config)
+        self.reset()
+    
+    def interpret(self, market_data):
+        close = market_data[:, self.c.CLOSE_IX]
+        self.returns = (close - self.prev_close) / self.prev_close
+        self.prev_close = close
+
+    def get_indicators(self) -> np.ndarray:
+        return self.returns[:, None]
+    
+    def get_indicator_names(self) -> list[str]:
+        return ['Returns']
+    
+    def reset(self):
+        self.returns = np.zeros(self.c.N_ASSETS)
+        self.prev_close = np.zeros(self.c.N_ASSETS)
+
+
 class OnBalanceVolume(ITechnicalIndicator):
     def __init__(self, config):
         super().__init__(config)
@@ -53,7 +74,7 @@ class OnBalanceVolume(ITechnicalIndicator):
         self.obv_ema = self.obv * self.k + self.obv_ema * (1 - self.k)
 
     def get_indicator_names(self) -> list[str]:
-        return ['OnBalanceVolume', 'OnBalanceVolumeEMA']
+        return ['OBV', 'OBV_EMA']
 
     def reset(self):
         self.last_close = np.zeros(self.c.N_ASSETS)
@@ -76,7 +97,7 @@ class AwesomeOscillator(ITechnicalIndicator):
         return (self.ema5 - self.ema34)[:, None]
 
     def get_indicator_names(self) -> list[str]:
-        return ['AwesomeOscillator']
+        return ['AwesomeOsl']
 
     def reset(self):
         self.ema34 = np.zeros(self.c.N_ASSETS)
@@ -97,7 +118,7 @@ class SimpleMovingAverage(ITechnicalIndicator):
         return np.column_stack((sma30, sma60))
     
     def get_indicator_names(self) -> list[str]:
-        return ['SimpleMovingAverage30', 'SimpleMovingAverage60']
+        return ['SMA30', 'SMA60']
 
     def reset(self):
         self.hist = np.zeros((self.c.N_ASSETS, 60))
@@ -117,7 +138,7 @@ class ExponentialMovingAverage(ITechnicalIndicator):
         return np.column_stack((self.ema30, self.ema60))
     
     def get_indicator_names(self) -> list[str]:
-        return ['ExponentialMovingAverage30', 'ExponentialMovingAverage60']
+        return ['EMA30', 'EMA60']
 
     def reset(self):
         self.ema30 = np.zeros(self.c.N_ASSETS)
@@ -181,8 +202,8 @@ class AverageDirectionalIndex(ITechnicalIndicator):
         return np.column_stack((self.adx, self.prev_adx, self.ema_DM_neg, self.ema_DM_pos))
     
     def get_indicator_names(self) -> list[str]:
-        return ['AverageDirectionalIndex', 'PrevAverageDirectionalIndex',
-            'NegDirectionalMovementEMA', 'PosDirectionalMovementEMA']
+        return ['ADX', 'Prev_ADX',
+            'NegDM_EMA', 'PosDM_EMA']
 
     def reset(self):
         self.market = np.zeros((self.c.N_ASSETS, self.c.N_VARIABLES))
@@ -233,8 +254,7 @@ class MovingAverageConvergenceDivergence(ITechnicalIndicator):
         return np.column_stack((self.macd, self.ema_macd))
 
     def get_indicator_names(self) -> list[str]:
-        return ['MovingAverageConvergenceDivergence',
-            'MovingAverageConvergenceDivergenceEMA']
+        return ['MACD', 'MACD_EMA']
     
     def reset(self):
         self.macd = np.zeros(self.c.N_ASSETS)
@@ -266,7 +286,7 @@ class RelativeStrengthIndex(ITechnicalIndicator):
         return self.rsi[:, None]
     
     def get_indicator_names(self) -> list[str]:
-        return ['RelativeStrengthIndex']
+        return ['RSI']
 
     def reset(self):
         self.latest_close = np.zeros(self.c.N_ASSETS)
@@ -295,7 +315,7 @@ class AccumulationDistribution(ITechnicalIndicator):
         return self.ad[:, None]
 
     def get_indicator_names(self) -> list[str]:
-        return ['AccumulationDistribution']
+        return ['AccDist']
 
     def reset(self):
         self.ad = np.zeros(self.c.N_ASSETS)
@@ -323,7 +343,7 @@ class BollingerBands(ITechnicalIndicator):
         return np.column_stack((bol_up, bol_down))  # Consider adding the difference between the 2
 
     def get_indicator_names(self) -> list[str]:
-        return ['BollingerBandsUp', 'BollingerBandsDown']
+        return ['BollingerUp', 'BollingerDown']
 
     def reset(self):
         self.tp_hist = np.zeros((self.c.N_ASSETS, 20))
@@ -355,7 +375,7 @@ class StochasticOscillator(ITechnicalIndicator):
         return np.column_stack((self.indicator, sma))
 
     def get_indicator_names(self) -> list[str]:
-        return ['StochasticOscillator', 'StochasticOscillatorSMA']
+        return ['StocOsl', 'StocOsl_SMA']
 
     def reset(self):
         self.counter = 0
@@ -383,7 +403,7 @@ class CommodityChannelIndex(ITechnicalIndicator):
         return self.cci[:, None]
 
     def get_indicator_names(self) -> list[str]:
-        return ['CommodityChannelIndex']
+        return ['CCI']
 
     def reset(self):
         self.tp_hist = np.zeros((self.c.N_ASSETS, 20))
@@ -393,6 +413,7 @@ class CommodityChannelIndex(ITechnicalIndicator):
 
 def collect_indicators(config) -> list[ITechnicalIndicator]:
     return [
+        Returns(config),
         OnBalanceVolume(config),
         AwesomeOscillator(config),
         SimpleMovingAverage(config),

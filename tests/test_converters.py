@@ -1,21 +1,25 @@
 import numpy as np
 from configs import TestConfig
 
-from trader.converters import ActionConverter, MarketInterpreter
+from trader.converters import MarketOrderConverter, MarketInterpreter
 from trader.indicators import CommodityChannelIndex, OnBalanceVolume
 from trader.validators import BookKeeper
 
 
-class TestActionConverter:
-    book_keeper = BookKeeper(TestConfig.INITIAL_PORTFOLIO.copy(),
-                             TestConfig.INITIAL_EXCHANGE_RATE.copy())
-    converter = ActionConverter(book_keeper)
+class TestMarketOrderConverter:
+    book_keeper = BookKeeper(TestConfig)
+    converter = MarketOrderConverter(book_keeper)
 
     def test_convert(self):
         action = np.array([0.25, 0.3, 0.45])
         order = self.converter.convert(action)
         ref_order = np.array([-4.131, 78.50970018, -0.30848408])
         np.testing.assert_allclose(order, ref_order)
+
+    def test_normalize(self):
+        action = np.array([-0.2, 0.8, 1.4])
+        np.testing.assert_allclose(self.converter._normalize(action),
+                                   np.array([0.0, 0.38461538, 0.61538462]))
 
 
 class TestMarketInterpreter:

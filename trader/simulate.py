@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+from abc import ABC, abstractmethod
 from rltools.utils import LoggingConfig
 
 from trader.data_loader import BinanceDataLoader
@@ -8,12 +9,11 @@ logger = logging.getLogger(__name__)
 LoggingConfig.add_config_to_logger(logger)
 
 
-class BinanceSimulator:
-    def __init__(self, data_loader: BinanceDataLoader, portfolio: np.ndarray,
-                 config):
+class IBinanceSimulator(ABC):
+    def __init__(self, data_loader: BinanceDataLoader, config):
         self.data_loader = data_loader
-        self.portfolio = portfolio
         self.c = config
+        self.portfolio = self.c.INITIAL_PORTFOLIO.copy()
 
     def execute(self, order):
         self._is_valid(order)
@@ -22,6 +22,58 @@ class BinanceSimulator:
         self._update_portfolio(trades)
         return market, self.portfolio
 
+    @abstractmethod
+    def _is_valid(self, order) -> bool:
+        """
+        Checks if requested order volumes are possible given 
+        current portfolio. Throws error if not possible: 
+        converter should have modified these.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _get_trades(self, order, market) -> np.ndarray:
+        """
+        Uses the requested order and the market to derive
+        which trades are executed.
+        """
+        raise NotImplementedError
+
+    def _update_portfolio(self, trades):
+        self.portfolio += trades
+
+    def get_market_data(self) -> np.ndarray:
+        """
+        Gets the next observation of the markets, including
+        TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, N_TRADES for each currency.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        np.ndarray
+            TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, N_TRADES, TimeIndex 
+            and indicators per currency in shape 
+            (n_assets, n_variables + n_indicators)
+        """
+        return self.data_loader.next()
+
+    def reset(self):
+        """
+        Called from state processor. Resets:
+        - Data?
+        - Intial portfolio? Or should that continue from last known pf?
+        """
+        self.data_loader.reset()
+        self.portfolio = self.c.INITIAL_PORTFOLIO.copy()
+
+
+class MarketOrderBinanceSimulator(IBinanceSimulator):
+    def __init__(self, data_loader: BinanceDataLoader, config):
+        super().__init__(data_loader, config)
+    
     def _is_valid(self, order) -> bool:
         # Check if requested order volumes are possible given current portfolio.
         # Throw error if not possible: converter should have modified these.
@@ -51,31 +103,24 @@ class BinanceSimulator:
         trades[0] -= cash_cost.sum()
         return trades
 
-    def _update_portfolio(self, trades):
-        self.portfolio += trades
 
-    def get_market_data(self) -> np.ndarray:
-        """
-        Gets the next observation of the markets, including
-        TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, N_TRADES for each currency.
+class LimitOrderBinanceSimulator(IBinanceSimulator):
+    """ Executes limit orders """
 
-        Parameters
-        ----------
-        None
+    def __init__(self, data_loader: BinanceDataLoader, config):
+        super().__init__(data_loader, config)
+    
+    def _is_valid(self, order) -> bool:
+        # Selling more of a ccy than available is not allowed
+        # Buying accommodated as long as cash is available
+        return True
 
-        Returns
-        -------
-        np.ndarray
-            TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, N_TRADES per currency 
-            in shape (n_assets, n_variables)
-        """
-        return self.data_loader.next()
-
-    def reset(self):
-        """
-        Called from state processor. Resets:
-        - Data?
-        - Intial portfolio? Or should that continue from last known pf?
-        """
-        self.data_loader.reset()
-        raise NotImplementedError
+    def _get_trades(self, order, market) -> np.ndarray:
+        buy = np.where(order[:, 1] < market[:, self.c.LOW_IX], 0., order[:, 0])
+        sell = np.where(order[:, 3] > market[:, self.c.HIGH_IX], 0., order[:, 2])
+        cash_cost = (buy @ order[:, 1]) * (1 + self.c.TRANSACTION_FEE) - \
+                    (sell @ order[:, 3]) * (1 - self.c.TRANSACTION_FEE)
+        trades = np.zeros_like(self.portfolio)
+        trades[1:] = buy - sell
+        trades[0] = -cash_cost
+        return trades
