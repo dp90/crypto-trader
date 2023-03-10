@@ -1,0 +1,108 @@
+[experiment]
+    sampling_algorithm = "random"
+    primary_metric = "pct_goal_achieved"
+    goal = "Maximize"
+    max_total_trials = 8
+    max_concurrent_trials = 4
+    timeout = 7200  # seconds
+
+[hyperparameters]
+    [hyperparameters.seed]
+        description = 'random seed'
+        default = 124
+        type = 'int'
+        min = 123
+        max = 123
+
+    [hyperparameters.action_log_std]
+        description = 'Action log standard deviation'
+        default = -0.5
+        type = 'float'
+        min = -2.5
+        max = 0.0
+
+    [hyperparameters.discount_factor]
+        description = 'Discount factor'
+        default = 0.99
+        type = 'float'
+        min = 0
+        max = 1
+
+    [hyperparameters.gae_lambda]
+        description = 'General Advantage Estimation '
+        default = 0.9
+        type = 'float'
+        min = 0.9
+        max = 1
+
+    [hyperparameters.critic_hidden_dims]
+        description = 'Critics hidden layer dimensions, separated by spaces'
+        default = '512 512'
+        type = 'category'
+        array = true
+        options = ['128 128', '128 128 128', '256 256', '256 256 256', '512 512']
+
+    [hyperparameters.critic_learning_rate]
+        description = 'Critic learning rate'
+        default = 3e-3
+        type = 'category'
+        options = [1e-2, 5e-3, 1e-3, 5e-4, 1e-4, 5e-5]
+
+    [hyperparameters.actor_hidden_dims]
+        description = 'Actors hidden layer dimensions, separated by spaces'
+        default = '512 512'
+        type = 'category'
+        array = true
+        options = ['128 128', '128 128 128', '256 256', '256 256 256', '512 512']
+
+    [hyperparameters.actor_learning_rate]
+        description = 'Actor learning rate'
+        default = 3e-3
+        type = 'category'
+        options = [1e-2, 5e-3, 1e-3, 5e-4, 1e-4, 5e-5]
+
+    [hyperparameters.n_episodes]
+        description = 'Set to 1'
+        default = 1
+        type = 'int'
+        min = 1
+        max = 1
+
+    [hyperparameters.n_epochs]
+        description = 'Number of epochs to train for'
+        default = 250
+        type = 'category'
+        options = [5]
+
+    [hyperparameters.clip_ratio]
+        description = 'PPO clip ratio'
+        default = 0.1
+        type = 'float'
+        min = 0.05
+        max = 0.2
+
+    [hyperparameters.n_actor_updates]
+        description = 'Number of actor updates per epoch'
+        default = 2
+        type = 'int'
+        min = 1
+        max = 5
+
+    [hyperparameters.n_critic_updates]
+        description = 'Number of critic updates per epoch'
+        default = 2
+        type = 'int'
+        min = 1
+        max = 5
+
+    [hyperparameters.update_batch_size]
+        description = 'Batch size for updates'
+        default = 64
+        type = 'category'
+        options = [32, 64, 128, 256]
+
+    [hyperparameters.buffer_size]
+        description = 'Maximum size of experience buffer'
+        default = 10000
+        type = 'category'
+        options = [10000]

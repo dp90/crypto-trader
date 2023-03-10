@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trader"
+version = "0.0.1"
+authors = [{ name = "David P. Kroon", email = "dpkroon@gmail.com" }]
+description = "Crypto Trader With Reinforcement Learning Engine"
+dependencies = []
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "BSD 3-Clause License" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: Microsoft :: Windows",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[tool.setuptools.packages.find]
+include = ["trader*"]

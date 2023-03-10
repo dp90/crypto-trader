@@ -118,6 +118,9 @@ venv.bak/
 /.idea
 *.iml
 
+# Visual Studio Code project settings
+/.vscode
+
 # Rope project settings
 .ropeproject
 
@@ -133,4 +136,5 @@ dmypy.json
 .pyre/
 
 # data in data directory
-/data
+/data/raw
+/data/processed
