@@ -1,0 +1,24 @@
+{
+  "exchange": "Binance",
+  "cash": "USDT",
+  "crypto": [
+    "ADA",
+    "ATOM",
+    "BNB",
+    "BTC",
+    "ETH",
+    "LINK",
+    "LTC",
+    "TRX",
+    "XLM",
+    "XRP",
+    "VET"
+  ],
+  "startDate": "01/05/2019",
+  "startTime": "00:01",
+  "endDate": "21/03/2021",
+  "endTime": "15:01",
+  "timeFormat": "%d/%m/%Y %H:%M",
+  "timeStep": "5m",
+  "request_interval_in_hours": 2
+}
